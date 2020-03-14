@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -f usr/share/applications/homebank.desktop ] ; then
+	sed -i \
+		-e 's%Name=.*%Name=HomeBank finance management%' \
+		-e 's%Exec=.*%Exec=homebank%' \
+		-e 's%Categories=.*%Categories=X-Calculate%' \
+			usr/share/applications/homebank.desktop
+fi

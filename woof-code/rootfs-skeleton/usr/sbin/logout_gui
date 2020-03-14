@@ -1,16 +1,33 @@
-#!/bin/sh
+#!/bin/ash
+
+#set -x
 
 export TEXTDOMAIN=logout_gui
 
 X_SERVER=`type X|awk '{print $3}'`
 X=`readlink $X_SERVER`
 MSG_X="$(gettext "Active graphical server"): <b>$X</b>"
-[ "`grep -F 'jwm' <<< $(ps -eo pid,command)`" ] && MSG_JWM="$(gettext "Active window manager"): <b>JWM</b>"
+if pidof jwm >/dev/null 2>&1 ; then
+	MSG_WM="$(gettext "Active window manager"): <b>JWM</b>"
+	RESTART_MENUAPP="$(gettext 'Restart window manager')"
+	MENUAPP=jwm
+elif pidof lxpanel >/dev/null 2>&1 ; then
+	RESTART_MENUAPP="$(gettext 'Restart LXPanel')"
+	MENUAPP=lxpanel
+	if pidof openbox >/dev/null 2>&1 ; then
+		MSG_WM="$(gettext "Active window manager"): <b>Openbox</b>"
+		RESTART_MENUAPP="$(gettext 'Restart LXPanel+Openbox')"
+	fi
+elif pidof openbox >/dev/null 2>&1 ; then
+	MSG_WM="$(gettext "Active window manager"): <b>Openbox</b>"
+	RESTART_MENUAPP="$(gettext 'Restart Openbox')"
+	MENUAPP=openbox
+fi
 
 S='
-<window title="'$(gettext 'Puppy Log Out')'" icon-name="gtk-preferences" window-position="1">
+<window title="'$(gettext 'Puppy Log Out')'" icon-name="gtk-preferences" window-position="1" resizable="false">
 <vbox space-expand="true" space-fill="true">
-  '"`/usr/lib/gtkdialog/xml_info fixed puppy_config.svg 60 "$MSG_JWM" "$MSG_X"`"'
+  '"`/usr/lib/gtkdialog/xml_info fixed puppy_config.svg 60 "$MSG_WM" "$MSG_X"`"'
   <vbox spacing="10" space-expand="true" space-fill="true">
   <frame>
     <hbox spacing="10" homogeneous="true" space-expand="true" space-fill="true">
@@ -40,11 +57,11 @@ S='
     </hbox>
     
     <hbox spacing="10" homogeneous="true" space-expand="true" space-fill="true">'
-      if [ "`grep -F 'jwm' <<< $(ps -eo pid,command)`" ]; then S=$S'
+      if [ "$MENUAPP" ]; then S=$S'
         <button image-position="2">
-          <label>'$(gettext 'Restart window manager')'</label>
+          <label>'${RESTART_MENUAPP}'</label>
           '"`/usr/lib/gtkdialog/xml_button-icon wm_restart.svg huge`"'
-          <action>exit:restartjwm</action>
+          <action>exit:restartmenuapp</action>
         </button>'
       else
         S=$S'<text><label>""</label></text>'
@@ -55,7 +72,7 @@ S='
           '"`/usr/lib/gtkdialog/xml_button-icon screen_lock.svg huge`"'
           <action>/usr/local/apps/Xlock/AppRun</action>
         </button>'
-      elif [ "`grep -F 'jwm' <<< $(ps -eo pid,command)`" ]; then S=$S'
+      elif [ "`ps -eo pid,comm | grep -F 'jwm'`" ]; then S=$S'
         <button image-position="2">
           <label>'$(gettext 'Rebuild Menu')'</label>
           '"`/usr/lib/gtkdialog/xml_button-icon menu.svg huge`"'
@@ -74,13 +91,23 @@ S='
 export logout="$S"
 
 . /usr/lib/gtkdialog/xml_info gtk > /dev/null #build bg_pixmap for gtk-theme
-eval `gtkdialog -p logout`
+retvals="`gtkdialog -p logout`"
+eval "$retvals"
 case $EXIT in
   logout)exec wmexit ;;
   reboot)exec wmreboot ;;
   poweroff)exec wmpoweroff ;;
   restartx)restartwm ;;
-  restartjwm)jwm -restart ;;
+  restartmenuapp)
+	case $MENUAPP in
+		openbox) openbox --restart ;;
+		jwm) jwm -restart ;;
+		lxpanel)
+			lxpanelctl restart
+			pidof openbox >/dev/null 2>&1 && openbox --restart
+			;;
+	esac
+	;;
   refreshjwm)fixmenus; jwm -reload ;;
   *)exit ;;
 esac

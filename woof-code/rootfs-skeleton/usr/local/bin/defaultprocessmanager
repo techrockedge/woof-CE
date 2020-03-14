@@ -1,0 +1,9 @@
+#!/bin/ash
+
+if [ "$DISPLAY" ] ; then
+	which lxtask >/dev/null 2>&1 && exec lxtask
+	which htop >/dev/null 2>&1 && exec defaultterminal -e htop
+else
+	which htop >/dev/null 2>&1 && exec htop
+fi
+

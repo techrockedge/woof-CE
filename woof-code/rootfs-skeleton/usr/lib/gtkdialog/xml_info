@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/ash
 #this generates xml code for a gtkdialog gui.
 #it is NOT a standalone window
 #
@@ -19,15 +19,22 @@
 
 case $1 in
 	gtk)
-		#. $HOME/.theme_nnnnn #this to allow some kind of theming in the future
 		case $2 in
 			green|yes|1)
-				COLOR1='#BED1C1'
-				COLOR2='#006F04'
+				XML_INFO_COLOR1='#D0EADB'
+				XML_INFO_COLOR2='#006F04'
 				;;
 			red|no|0)
-				COLOR1='#DFCECE'
-				COLOR2='#8E0000'
+				XML_INFO_COLOR1='#DFCECE'
+				XML_INFO_COLOR2='#8E0000'
+				;;
+			blue)
+				XML_INFO_COLOR1='#DBEAEF'
+				XML_INFO_COLOR2='#8E0000'
+				;;
+			"") #use default config
+				XML_INFO_COLOR1=""
+				XML_INFO_COLOR2=""
 				;;
 		esac
 		#if no theme-values is defined - use the default
@@ -35,7 +42,7 @@ case $1 in
 		#read config if exist
 		[ -s $HOME/.config/ptheme/gtkdialog_active ] && . $HOME/.config/ptheme/gtkdialog_active
 		[ ! "$XML_INFO_OPACITY" ]	&& XML_INFO_OPACITY=0.5 #background opacity to melt into different global gtk-themes. gradients does not support this.
-		[ ! "$XML_INFO_COLOR1" ]	&& XML_INFO_COLOR1='#EDEAC6' #background color
+		[ ! "$XML_INFO_COLOR1" ]	&& XML_INFO_COLOR1='#EDEBD7' #background color
 		[ ! "$XML_INFO_COLOR2" ]	&& XML_INFO_COLOR2='#000000' #gradient spot color
 		[ ! "$XML_INFO_MODE" ]		&& XML_INFO_MODE="flat" #drawing mode
 

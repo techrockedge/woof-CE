@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ -f usr/share/applications/leafpad.desktop ] ; then
+	sed -i \
+		-e 's%Name=.*%Name=Leafpad text editor%' \
+		-e 's%Exec=.*%Exec=leafpad%' \
+		-e 's%Icon=.*%Icon=leafpad.png%' \
+		-e 's%Categories=.*%Categories=TextEditor%' \
+			usr/share/applications/leafpad.desktop
+fi

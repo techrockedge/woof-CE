@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 #(c) Barry Kauler, April 2009. GPL v3 licence (refer: /usr/share/doc/legal).
 #gui for 'bcrypt' file encrypt/decrypt.
 #$1 is normally invoked by clicking on a .bfe file in rox, $1 has full path.
@@ -18,20 +18,39 @@ export OUTPUT_CHARSET=UTF-8
 export LANGORG=$LANG
 
 if [ "`which bcrypt`" = "" ];then
- pupmessage -center -bg red -title "$(gettext 'Bcrypt error')" "$(gettext "The 'bcrypt' package must be installed first.")"
+ /usr/lib/gtkdialog/box_ok "Bcrypt" error "$(gettext "The 'bcrypt' package must be installed first.")"
  exit
 fi
 
-#if [ ! $1 ];then
- #run from the menu. this section was originally created by 'coolpup', jan. 2009.
- #modified by BK april 2009.
- SOURCEFILE=""
- if [ "$1" ];then
-  SOURCEFILE="$1"
-  [ ! -f "$SOURCEFILE" ] && exit
- fi
+#----------------------------------------------------
+if [ "$1" = "__help" ] ; then
+	echo "$(gettext "Bcrypt is a cross-platform file encryption utility which means that encrypted files are portable across all supported operating systems and processors, of which Linux and Win32 are two of them.
+
+It is used for encrypting files, and can be used for secure deletion, which is better than any common file shredder since the deleted file has been encrypted beforehand. It is available from the main menu and from the right-click context menu by default for most of the basic text, image, and audio file types.
  
- while [ 1 ];do
+Passphrases must be between 8 and 56 characters and are hashed internally to a 448 bit key (the largest keysize supported by the blowfish algorithm) regardless of the passphrase size. However, all characters supplied are significant since the stronger your passphrase, the more secure your data will be. WARNING: If you forget the encryption key (passphrase) your file can never be opened again in your lifetime and probably never will.
+
+By default, bcrypt will compress input files before encryption, remove input files after they are processed (assuming they are processed successfully), and overwrite the original input files with random data three times before deleting them in order to prevent data recovery by unauthorized persons.
+
+Encrypted files will be saved with an extension of .bfe. Any files ending in .bfe will be assumed to be encrypted with bcrypt, and so bcrypt will attempt to decrypt them. Any other input files will be encrypted. Bcrypt uses the blowfish encryption algorithm published by Bruce Schneier in 1993.
+
+Pcrypt was created by coolpup for Puppy Linux, February 2009 GPL v3 Licence.
+
+Bcrypt_gui based on Pcrypt, by Barry Kauler, April 2009.
+
+Bcrypt copyright (c) 2002 Johnny Shelley All rights reserved. Licence supplied.")" > /tmp/box_help
+
+	/usr/lib/gtkdialog/box_help "Bcrypt and encryption" &
+fi
+#----------------------------------------------------
+
+SOURCEFILE=""
+if [ "$1" ];then
+	[ ! -f "$1" ] && exit
+	SOURCEFILE="`realpath $1`"
+fi
+ 
+while [ 1 ];do
   if [ "$SOURCEFILE" = "" ];then
    DEFAULT=""
   else
@@ -40,7 +59,7 @@ fi
 
   #main gui
   S='
-<window title="Bcrypt - '$(gettext 'File encryption')'" icon-name="gtk-file">
+<window title="Bcrypt - '$(gettext 'File encryption')'" icon-name="gtk-file" resizable="false">
 <vbox space-expand="true" space-fill="true">
   '"`/usr/lib/gtkdialog/xml_info scale "file_lock.svg" 60 "$(gettext 'Bcrypt is a utility to encrypt or decrypt a file')" "$(gettext 'Drag the file you want to <b>encrypt or decrypt</b> into the field or use the browse-button.')" "<b><span color='"'red'"'>$MSG2</span></b>"`"' 
   <frame>
@@ -89,7 +108,7 @@ fi
       <button>
         <label>'$(gettext "Help")'</label>
         '"`/usr/lib/gtkdialog/xml_button-icon help`"'
-        <action>bcrypt_gui_help</action>
+        <action>'${0}' __help</action>
       </button>
     </hbox>
     <text space-expand="true" space-fill="true"><label>""</label></text>
@@ -114,13 +133,11 @@ fi
   I=$IFS; IFS='
 '
   for RETVAL in `gtkdialog -p Bcrypt`; do
-    if [[ "$RETVAL" == "PASSWORD1"* ]]; then
-      PASSWORD1="`echo $RETVAL | cut -f2- -d '"' | rev | cut -f2- -d '"' | rev`"
-    elif [[ "$RETVAL" == "PASSWORD2"* ]]; then
-      PASSWORD2="`echo $RETVAL | cut -f2- -d '"' | rev | cut -f2- -d '"' | rev`"
-    else
-      eval "$RETVAL"
-    fi
+    case "$RETVAL" in
+      "PASSWORD1"*) PASSWORD1="`echo $RETVAL | cut -f2- -d '"' | rev | cut -f2- -d '"' | rev`" ;;
+      "PASSWORD2"*) PASSWORD2="`echo $RETVAL | cut -f2- -d '"' | rev | cut -f2- -d '"' | rev`" ;;
+      *) eval "$RETVAL" ;;
+    esac
   done
   IFS=$I
 
@@ -143,12 +160,11 @@ fi
   DIRNAME="`dirname "$SOURCEFILE"`"
   BASENAME="`basename "$SOURCEFILE"`"
   cd "$DIRNAME"
-  if [ "`echo "$BASENAME" | grep '\.bfe$'`" != "" ];then
-   echo "$PASSWORD1" | bcrypt $BOPTS "$BASENAME" 2>/tmp/bcrypt_error
-  else
-   echo "$PASSWORD1
-$PASSWORD2" | bcrypt $BOPTS "$BASENAME" 2>/tmp/bcrypt_error
-  fi
+  case "$BASENAME" in
+    *.bfe) echo "$PASSWORD1" | bcrypt $BOPTS "$BASENAME" 2>/tmp/bcrypt_error ;;
+    *) echo "$PASSWORD1
+$PASSWORD2" | bcrypt $BOPTS "$BASENAME" 2>/tmp/bcrypt_error ;;
+  esac
   if [ $? -ne 0 ];then
    MSG2="`cat /tmp/bcrypt_error | tail -n 1`"
    continue
@@ -157,7 +173,6 @@ $PASSWORD2" | bcrypt $BOPTS "$BASENAME" 2>/tmp/bcrypt_error
   break
  done
 
- exit
-#fi
+exit
 
 ###END###
