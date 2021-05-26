@@ -1,6 +1,6 @@
 #!/bin/bash
 #pTheme
-#Copyright - GPL 2014,2015,2016,2017
+#Copyright - GPL 2014,2015,2016,2017,2021
 #Sigmund Berglund
 
 [ -z $ROX_DESKTOP ] && pidof ROX-Filer >/dev/null 2>&1 && export ROX_DESKTOP=yes
@@ -8,6 +8,7 @@
 IFS=$'\n'
 export TEXTDOMAIN=ptheme
 export PID_PTHEME=$$
+export MY_LANG=$LANG #we use alot of LANG=C to speed up things during startup
 
 export WORKDIR=$HOME/.ptheme/tmp/ptheme
 export CONFDIR=/usr/share/ptheme/globals
@@ -108,7 +109,7 @@ save (){
 	  </hbox>
 	</vbox>
 	</window>'
-	for STATEMENTS in "$(gtkdialog -p savebox --center)"; do
+	for STATEMENTS in "$(gtkdialog -p savebox --center --styles=/tmp/gtkrc_xml_info.css)"; do
 		eval $STATEMENTS 2> /dev/null
 	done
 	if [ "$EXIT" = "save" ]; then
@@ -311,6 +312,7 @@ set_theme (){
 		cp -f $HOME/.pwidgets/profiles/$PTHEME_PWIDGETS_PROFILE/pwidgetsrc $HOME/.pwidgets/pwidgetsrc
 		cp -f $HOME/.pwidgets/profiles/$PTHEME_PWIDGETS_PROFILE/pwidgets_list $HOME/.pwidgets/tmp/pwidgets_list
 		echo "$PTHEME_PWIDGETS_PROFILE" > $HOME/.pwidgets/tmp/PROFILE
+		export LANG=$MY_LANG #get correct $LANG in widgets
 		/usr/local/pwidgets/func -apply
 		UPDATE_PWIDGETS=true
 		SWITCH_THEME=true
@@ -413,6 +415,8 @@ echo -n > $WORKDIR/ptheme-pwidgets_profile
 echo -n > $WORKDIR/ptheme-pwidgets_theme
 
 build_menus
+
+LANG=$MY_LANG #get correct $LANG in gui
 
 S='
 <window title="pTheme" icon-name="gtk-preferences" default-height="550" default-width="550">
@@ -718,10 +722,11 @@ S='
      <label>'$(gettext 'More')'</label>
      <action>pcur &</action>
     </button>
-   </hbox>
+   </hbox>'
 
 ##  G T K D I A L O G
-
+	
+	S=$S'
    <hbox space-expand="true" space-fill="true">
     <menubar space-expand="true" space-fill="true">
       <menu label="'$(gettext 'Puppy top-layer')'" stock="gtk-arrow_down">
@@ -824,14 +829,21 @@ S='
 echo "$S" | sed -e 's/##.*//' > $WORKDIR/xml_$PID_PTHEME  #I use double hash (##) for comments. Colors are defined as #FF0000
 
 #gtk theme
-echo 'pixmap_path "/usr/share/pixmaps/puppy/"
-style "icon-style"
-{
-  stock["gtk-arrow_down"] = {{ "arrow_mini_down.svg", *, *, *}}
-}
-class "GtkWidget" style "icon-style"' > /tmp/gtkrc_ptheme
-export GTK2_RC_FILES=/tmp/gtkrc_ptheme:$HOME/.gtkrc-2.0
+if [ "$GTKDIALOG_BUILD" = 'GTK3' ];then
+	echo '@import url("/tmp/gtkrc_xml_info.css");
+menuitem {
+	min-width: 12rem;
+}' > /tmp/gtkrc_ptheme.css
+else
+	echo 'pixmap_path "/usr/share/pixmaps/puppy/"
+	style "icon-style"
+	{
+	  stock["gtk-go-down"] = {{ "arrow_mini_down.svg", *, *, *}}
+	}
+	class "GtkWidget" style "icon-style"' > /tmp/gtkrc_ptheme
+	export GTK2_RC_FILES=/tmp/gtkrc_ptheme:$HOME/.gtkrc-2.0
+fi
 #---
 
 . /usr/lib/gtkdialog/xml_info gtk #build bg_pixmap for gtk-theme
-gtkdialog -f $WORKDIR/xml_$PID_PTHEME
+gtkdialog -f $WORKDIR/xml_$PID_PTHEME --styles=/tmp/gtkrc_ptheme.css 2>/dev/null

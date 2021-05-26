@@ -37,15 +37,20 @@ doomlegacy-1.46.3-x86_64_s700|doomlegacy|1.46.3-x86_64_s700||Fun|53772||doomlega
 doomlegacy_DEV-1.46.3-x86_64_s700|doomlegacy_DEV|1.46.3-x86_64_s700||Fun|20||doomlegacy_DEV-1.46.3-x86_64_s700.pet|+doomlegacy|doomlegacy development||||
 dpkg-deb-1.18.9-x86_64_s700|dpkg-deb|1.18.9-x86_64_s700||BuildingBlock|148||dpkg-deb-1.18.9-x86_64_s700.pet||Debian packaging tool|slackware64|14.2||
 dpkg-deb_DEV-1.18.9-x86_64_s700|dpkg-deb_DEV|1.18.9-x86_64_s700||BuildingBlock|20||dpkg-deb_DEV-1.18.9-x86_64_s700.pet|+dpkg-deb|dpkg-deb development|slackware64|14.2||
-dropbear-2015.67-x86_64_s700|dropbear|2015.67-x86_64_s700||BuildingBlock|248||dropbear-2015.67-x86_64_s700.pet||a very light weight ssh client and server|slackware64|14.2||
-dropbear_DEV-2015.67-x86_64_s700|dropbear_DEV|2015.67-x86_64_s700||BuildingBlock|20||dropbear_DEV-2015.67-x86_64_s700.pet|+dropbear|dropbear development|slackware64|14.2||
-dropbear_DOC-2015.67-x86_64_s700|dropbear_DOC|2015.67-x86_64_s700||BuildingBlock|48||dropbear_DOC-2015.67-x86_64_s700.pet|+dropbear|dropbear documentation||||
-dunst-1.0.0-x86_64_s700|dunst|1.0.0-x86_64_s700||BuildingBlock|136||dunst-1.0.0-x86_64_s700.pet|+libxdg-basedir|a light weight notification daemon|slackware64|14.2||
-dunst_DEV-1.0.0-x86_64_s700|dunst_DEV|1.0.0-x86_64_s700||BuildingBlock|20||dunst_DEV-1.0.0-x86_64_s700.pet|+dunst|dunst development||||
-dunst_DOC-1.0.0-x86_64_s700|dunst_DOC|1.0.0-x86_64_s700||BuildingBlock|32||dunst_DOC-1.0.0-x86_64_s700.pet|+dunst|dunst documentation||||
+dropbear-2019.78-x86_64_s701|dropbear|2019.78-x86_64_s701||BuildingBlock|324||dropbear-2019.78-x86_64_s701.pet||a very light weight ssh client and server|slackware64|14.2||
+dropbear_DEV-2019.78-x86_64_s701|dropbear_DEV|2019.78-x86_64_s701||BuildingBlock|20||dropbear_DEV-2019.78-x86_64_s701.pet|+dropbear|dropbear development|slackware64|14.2||
+dropbear_DOC-2019.78-x86_64_s701|dropbear_DOC|2019.78-x86_64_s701||BuildingBlock|48||dropbear_DOC-2019.78-x86_64_s701.pet|+dropbear|dropbear documentation||||
+dunst-1.4.1-x86_64_s700|dunst|1.4.1-x86_64_s700||BuildingBlock|184||dunst-1.4.1-x86_64_s700.pet||a light weight notification daemon|slackware64|14.2||
+dunst_DEV-1.4.1-x86_64_s700|dunst_DEV|1.4.1-x86_64_s700||BuildingBlock|20||dunst_DEV-1.4.1-x86_64_s700.pet|+dunst|dunst development|slackware64|14.2||
+dunst_DOC-1.4.1-x86_64_s700|dunst_DOC|1.4.1-x86_64_s700||BuildingBlock|60||dunst_DOC-1.4.1-x86_64_s700.pet|+dunst|dunst documentation||||
+efivar-37-x86_64_s702|efivar|37-x86_64_s702||BuildingBlock|284||efivar-37-x86_64_s702.pet||UEFI efi variables tool|slackware64|14.2||
+efivar_DEV-37-x86_64_s702|efivar_DEV|37-x86_64_s702||BuildingBlock|108||efivar_DEV-37-x86_64_s702.pet|+efivar|efivar development|slackware64|14.2||
+efivar_DOC-37-x86_64_s702|efivar_DOC|37-x86_64_s702||BuildingBlock|152||efivar_DOC-37-x86_64_s702.pet|+efivar|efivar documentation||||
 enchant-1.6.0-x86_64_s700|enchant|1.6.0-x86_64_s700||BuildingBlock|196||enchant-1.6.0-x86_64_s700.pet|+hunspell|a generic interface into various existing spell checking libraries|slackware64|14.2||
 enchant_DEV-1.6.0-x86_64_s700|enchant_DEV|1.6.0-x86_64_s700||BuildingBlock|1204||enchant_DEV-1.6.0-x86_64_s700.pet|+enchant|enchant development|slackware64|14.2||
 enchant_DOC-1.6.0-x86_64_s700|enchant_DOC|1.6.0-x86_64_s700||BuildingBlock|24||enchant_DOC-1.6.0-x86_64_s700.pet|+enchant|enchant documentation||||
+epson-escpr-1.7.7-x86_64_slacko6414.2|epson-escpr|1.7.7-x86_64_slacko6414.2||Utility|34016||epson-escpr-1.7.7-x86_64_slacko6414.2.pet||epson escpr printer drivers|slackware64|14.2||
+epson-escpr_DEV-1.7.7-x86_64_slacko6414.2|epson-escpr_DEV|1.7.7-x86_64_slacko6414.2||Utility|1280||epson-escpr_DEV-1.7.7-x86_64_slacko6414.2.pet|+epson-escpr|epson-escpr development|slackware64|14.2||
 evince-2.32.0-x86_64_s701|evince|2.32.0-x86_64_s701||Document|1660||evince-2.32.0-x86_64_s701.pet|+libspectre,libdjvulibre,+poppler,+gtk+2|Light weight PDF viewer|slackware64|14.2||
 evince_DEV-2.32.0-x86_64_s701|evince_DEV|2.32.0-x86_64_s701||Document|348||evince_DEV-2.32.0-x86_64_s701.pet|+evince|evince development|slackware64|14.2||
 evince_DOC-2.32.0-x86_64_s701|evince_DOC|2.32.0-x86_64_s701||Document|1976||evince_DOC-2.32.0-x86_64_s701.pet|+evince|evince documentation||||
@@ -71,17 +76,24 @@ freealut-1.1.0-x86_64_s700|freealut|1.1.0-x86_64_s700||BuildingBlock|52||freealu
 freealut_DEV-1.1.0-x86_64_s700|freealut_DEV|1.1.0-x86_64_s700||BuildingBlock|200||freealut_DEV-1.1.0-x86_64_s700.pet|+freealut|freealut development|slackware64|14.2||
 freememapplet-2.8.6-x86_64_s700|freememapplet|2.8.6-x86_64_s700||BuildingBlock|44||freememapplet-2.8.6-x86_64_s700.pet|+glib2|a tray applet that displays savefile space|slackware64|14.2||
 freememapplet_DEV-2.8.6-x86_64_s700|freememapplet_DEV|2.8.6-x86_64_s700||BuildingBlock|20||freememapplet_DEV-2.8.6-x86_64_s700.pet|+freememapplet|freememapplet development||||
-geany-1.27-x86_64_s700|geany|1.27-x86_64_s700||Document|5244||geany-1.27-x86_64_s700.pet|+gtk+2|Light weight powerful gtk text editor and IDE|slackware64|14.2||
-geany_DEV-1.27-x86_64_s700|geany_DEV|1.27-x86_64_s700||Document|552||geany_DEV-1.27-x86_64_s700.pet|+geany|geany development|slackware64|14.2||
-geany_DOC-1.27-x86_64_s700|geany_DOC|1.27-x86_64_s700||Document|3000||geany_DOC-1.27-x86_64_s700.pet|+geany|geany documentation||||
-geany_NLS-1.27-x86_64_s700|geany_NLS|1.27-x86_64_s700||Document|4268||geany_NLS-1.27-x86_64_s700.pet|+geany|geany locales||||
-geany-plugins-1.27-x86_64_s700|geany-plugins|1.27-x86_64_s700||BuildingBlock|2092||geany-plugins-1.27-x86_64_s700.pet|+geany|Plugins for geany IDE|slackware64|14.2||
-geany-plugins_DEV-1.27-x86_64_s700|geany-plugins_DEV|1.27-x86_64_s700||BuildingBlock|160||geany-plugins_DEV-1.27-x86_64_s700.pet|+geany-plugins|geany-plugins development|slackware64|14.2||
-geany-plugins_DOC-1.27-x86_64_s700|geany-plugins_DOC|1.27-x86_64_s700||BuildingBlock|2144||geany-plugins_DOC-1.27-x86_64_s700.pet|+geany-plugins|geany-plugins documentation||||
-geany-plugins_NLS-1.27-x86_64_s700|geany-plugins_NLS|1.27-x86_64_s700||BuildingBlock|1372||geany-plugins_NLS-1.27-x86_64_s700.pet|+geany-plugins|geany-plugins locales||||
+geany-1.35-x86_64_s702|geany|1.35-x86_64_s702||Document|6484||geany-1.35-x86_64_s702.pet|+gtk+2|Light weight powerful gtk text editor and IDE|slackware64|14.2||
+geany_DEV-1.35-x86_64_s702|geany_DEV|1.35-x86_64_s702||Document|564||geany_DEV-1.35-x86_64_s702.pet|+geany|geany development|slackware64|14.2||
+geany_DOC-1.35-x86_64_s702|geany_DOC|1.35-x86_64_s702||Document|3500||geany_DOC-1.35-x86_64_s702.pet|+geany|geany documentation||||
+geany_NLS-1.35-x86_64_s702|geany_NLS|1.35-x86_64_s702||Document|4532||geany_NLS-1.35-x86_64_s702.pet|+geany|geany locales||||
+geany-plugins-1.35-x86_64_s702|geany-plugins|1.35-x86_64_s702||BuildingBlock|2632||geany-plugins-1.35-x86_64_s702.pet|+geany|Plugins for geany IDE|slackware64|14.2||
+geany-plugins_DEV-1.35-x86_64_s702|geany-plugins_DEV|1.35-x86_64_s702||BuildingBlock|176||geany-plugins_DEV-1.35-x86_64_s702.pet|+geany-plugins|geany-plugins development|slackware64|14.2||
+geany-plugins_DOC-1.35-x86_64_s702|geany-plugins_DOC|1.35-x86_64_s702||BuildingBlock|2320||geany-plugins_DOC-1.35-x86_64_s702.pet|+geany-plugins|geany-plugins documentation||||
+geany-plugins_NLS-1.35-x86_64_s702|geany-plugins_NLS|1.35-x86_64_s702||BuildingBlock|1456||geany-plugins_NLS-1.35-x86_64_s702.pet|+geany-plugins|geany-plugins locales||||
+glipper-lite-1.0-x86_64_s701|glipper-lite|1.0-x86_64_s701||BuildingBlock|120||glipper-lite-1.0-x86_64_s701.pet||Light weight gtk2 clipboard manager|slackware64|14.2||
+glipper-lite_DEV-1.0-x86_64_s701|glipper-lite_DEV|1.0-x86_64_s701||BuildingBlock|20||glipper-lite_DEV-1.0-x86_64_s701.pet|+glipper-lite|glipper-lite development|slackware64|14.2||
+glipper-lite_NLS-1.0-x86_64_s701|glipper-lite_NLS|1.0-x86_64_s701||BuildingBlock|100||glipper-lite_NLS-1.0-x86_64_s701.pet|+glipper-lite|glipper-lite locales||||
 gmeasures-0.7-x86_64_s700|gmeasures|0.7-x86_64_s700||Business|100||gmeasures-0.7-x86_64_s700.pet|+gtk+2|convert measurements from imperial to metric and back|slackware64|14.2||
 gmeasures_DEV-0.7-x86_64_s700|gmeasures_DEV|0.7-x86_64_s700||Business|20||gmeasures_DEV-0.7-x86_64_s700.pet|+gmeasures|gmeasures development|slackware64|14.2||
 gmeasures_DOC-0.7-x86_64_s700|gmeasures_DOC|0.7-x86_64_s700||Business|60||gmeasures_DOC-0.7-x86_64_s700.pet|+gmeasures|gmeasures documentation||||
+gmtk-1.0.9-x86_64_s702|gmtk|1.0.9-x86_64_s702||BuildingBlock|140||gmtk-1.0.9-x86_64_s702.pet|+gtk+2|gnome-mplayer toolkit library|slackware64|14.2||
+gmtk_DEV-1.0.9-x86_64_s702|gmtk_DEV|1.0.9-x86_64_s702||BuildingBlock|916||gmtk_DEV-1.0.9-x86_64_s702.pet|+gmtk|gmtk development|slackware64|14.2||
+gmtk_DOC-1.0.9-x86_64_s702|gmtk_DOC|1.0.9-x86_64_s702||BuildingBlock|68||gmtk_DOC-1.0.9-x86_64_s702.pet|+gmtk|gmtk documentation||||
+gmtk_NLS-1.0.9-x86_64_s702|gmtk_NLS|1.0.9-x86_64_s702||BuildingBlock|520||gmtk_NLS-1.0.9-x86_64_s702.pet|+gmtk|gmtk locales||||
 gnome-icon-theme-2.25.92-x86_64_s700|gnome-icon-theme|2.25.92-x86_64_s700||Desktop|19204||gnome-icon-theme-2.25.92-x86_64_s700.pet||Icon theme for gnome apps||||
 gnome-icon-theme_DEV-2.25.92-x86_64_s700|gnome-icon-theme_DEV|2.25.92-x86_64_s700||Desktop|20||gnome-icon-theme_DEV-2.25.92-x86_64_s700.pet|+gnome-icon-theme|gnome-icon-theme development|slackware64|14.2||
 gnome-icon-theme_DOC-2.25.92-x86_64_s700|gnome-icon-theme_DOC|2.25.92-x86_64_s700||Desktop|988||gnome-icon-theme_DOC-2.25.92-x86_64_s700.pet|+gnome-icon-theme|gnome-icon-theme documentation||||
@@ -89,6 +101,10 @@ gnome-icon-theme_NLS-2.25.92-x86_64_s700|gnome-icon-theme_NLS|2.25.92-x86_64_s70
 gnome-menus-2.14.3-x86_64_s700|gnome-menus|2.14.3-x86_64_s700||BuildingBlock|280||gnome-menus-2.14.3-x86_64_s700.pet||gnome-menus controls the heirarchy of the menu system|slackware64|14.2||
 gnome-menus_DEV-2.14.3-x86_64_s700|gnome-menus_DEV|2.14.3-x86_64_s700||BuildingBlock|748||gnome-menus_DEV-2.14.3-x86_64_s700.pet|+gnome-menus|gnome-menus development|slackware64|14.2||
 gnome-menus_NLS-2.14.3-x86_64_s700|gnome-menus_NLS|2.14.3-x86_64_s700||BuildingBlock|856||gnome-menus_NLS-2.14.3-x86_64_s700.pet|+gnome-menus|gnome-menus locales||||
+gnome-mplayer-1.0.9-x86_64_s702|gnome-mplayer|1.0.9-x86_64_s702||Multimedia|580||gnome-mplayer-1.0.9-x86_64_s702.pet|+gmtk,+gtk+2,+mplayer|A light weight graphical front end to MPlayer|slackware64|14.2||
+gnome-mplayer_DEV-1.0.9-x86_64_s702|gnome-mplayer_DEV|1.0.9-x86_64_s702||Multimedia|20||gnome-mplayer_DEV-1.0.9-x86_64_s702.pet|+gnome-mplayer|gnome-mplayer development|slackware64|14.2||
+gnome-mplayer_DOC-1.0.9-x86_64_s702|gnome-mplayer_DOC|1.0.9-x86_64_s702||Multimedia|208||gnome-mplayer_DOC-1.0.9-x86_64_s702.pet|+gnome-mplayer|gnome-mplayer documentation||||
+gnome-mplayer_NLS-1.0.9-x86_64_s702|gnome-mplayer_NLS|1.0.9-x86_64_s702||Multimedia|1260||gnome-mplayer_NLS-1.0.9-x86_64_s702.pet|+gnome-mplayer|gnome-mplayer locales||||
 gnumeric-1.10.17-x86_64_s701|gnumeric|1.10.17-x86_64_s701||Business|10204||gnumeric-1.10.17-x86_64_s701.pet|+goffice,+gtk+2,+glib2|A light weight spread sheet application|slackware64|14.2||
 gnumeric_DEV-1.10.17-x86_64_s701|gnumeric_DEV|1.10.17-x86_64_s701||Business|1068||gnumeric_DEV-1.10.17-x86_64_s701.pet|+gnumeric|gnumeric development|slackware64|14.2||
 gnumeric_DOC-1.10.17-x86_64_s701|gnumeric_DOC|1.10.17-x86_64_s701||Business|9784||gnumeric_DOC-1.10.17-x86_64_s701.pet|+gnumeric|gnumeric documentation||||
@@ -106,6 +122,9 @@ gphotofs_DEV-0.5-x86_64_s700|gphotofs_DEV|0.5-x86_64_s700||BuildingBlock|20||gph
 gpicview-0.2.4-x86_64_s700|gpicview|0.2.4-x86_64_s700||Graphic|184||gpicview-0.2.4-x86_64_s700.pet|+gtk+2|Light weight image viewer|slackware64|14.2||
 gpicview_DEV-0.2.4-x86_64_s700|gpicview_DEV|0.2.4-x86_64_s700||Graphic|20||gpicview_DEV-0.2.4-x86_64_s700.pet|+gpicview|gpicview development|slackware64|14.2||
 gpicview_NLS-0.2.4-x86_64_s700|gpicview_NLS|0.2.4-x86_64_s700||Graphic|788||gpicview_NLS-0.2.4-x86_64_s700.pet|+gpicview|gpicview locales||||
+gtkdialog-0.8.4a-x86_64_s702|gtkdialog|0.8.4a-x86_64_s702||BuildingBlock|316||gtkdialog-0.8.4a-x86_64_s702.pet|+gtk+2|gtkialog is a small utility for fast and easy GUI building|slackware64|14.2||
+gtkdialog_DEV-0.8.4a-x86_64_s702|gtkdialog_DEV|0.8.4a-x86_64_s702||BuildingBlock|20||gtkdialog_DEV-0.8.4a-x86_64_s702.pet|+gtkdialog|gtkdialog development|slackware64|14.2||
+gtkdialog_DOC-0.8.4a-x86_64_s702|gtkdialog_DOC|0.8.4a-x86_64_s702||BuildingBlock|1864||gtkdialog_DOC-0.8.4a-x86_64_s702.pet|+gtkdialog|gtkdialog documentation||||
 gtksourceview-2.10.5-x86_64_s700|gtksourceview|2.10.5-x86_64_s700||BuildingBlock|1420||gtksourceview-2.10.5-x86_64_s700.pet|+gtk+2|gtk source viewing libraries|slackware64|14.2||
 gtksourceview_DEV-2.10.5-x86_64_s700|gtksourceview_DEV|2.10.5-x86_64_s700||BuildingBlock|168||gtksourceview_DEV-2.10.5-x86_64_s700.pet|+gtksourceview|gtksourceview development|slackware64|14.2||
 gtksourceview_DOC-2.10.5-x86_64_s700|gtksourceview_DOC|2.10.5-x86_64_s700||BuildingBlock|1088||gtksourceview_DOC-2.10.5-x86_64_s700.pet|+gtksourceview|gtksourceview documentation||||
@@ -141,11 +160,11 @@ installwatch-0.7-x86_64|installwatch|0.7-x86_64||BuildingBlock|22K||installwatch
 iup-3.21-x86_64_s700|iup|3.21-x86_64_s700||BuildingBlock|756||iup-3.21-x86_64_s700.pet|+pangox|IUP is a portable toolkit for building graphical user interfaces|slackware64|14.2||
 iup_DEV-3.21-x86_64_s700|iup_DEV|3.21-x86_64_s700||BuildingBlock|1988||iup_DEV-3.21-x86_64_s700.pet|+iup|iup development|slackware64|14.2||
 iup_DOC-3.21-x86_64_s700|iup_DOC|3.21-x86_64_s700||BuildingBlock|24||iup_DOC-3.21-x86_64_s700.pet|+iup|iup documentation||||
-jwm-2.3.2-x86_64_s701|jwm|2.3.2-x86_64_s701||Desktop|276||jwm-2.3.2-x86_64_s701.pet|+cairo,+rsvg,+libpng,+libjpeg,+xpm,+fribidi|Joes Window Manager for X|slackware64|14.2||
-jwm_DEV-2.3.2-x86_64_s701|jwm_DEV|2.3.2-x86_64_s701||Desktop|20||jwm_DEV-2.3.2-x86_64_s701.pet|+jwm|jwm development||||
-jwm_DOC-2.3.2-x86_64_s701|jwm_DOC|2.3.2-x86_64_s701||Desktop|60||jwm_DOC-2.3.2-x86_64_s701.pet|+jwm|jwm documentation||||
-jwm_NLS-2.3.2-x86_64_s701|jwm_NLS|2.3.2-x86_64_s701||Desktop|156||jwm_NLS-2.3.2-x86_64_s701.pet|+jwm|jwm locales||||
-kernel_headers_musl-3.12.6-5-noarch_s700|kernel_headers_musl|3.12.6-5-noarch_s700||BuildingBlock|5144||kernel_headers_musl-3.12.6-5-noarch_s700.pet||sanitised Linux headers suitable for musl||||
+jwm-2.3.6-x86_64_s700|jwm|2.3.6-x86_64_s700||Desktop|352||jwm-2.3.6-x86_64_s700.pet|+cairo,+rsvg,+libpng,+libjpeg,+xpm,+fribidi|Joes Window Manager for X|slackware64|14.2||
+jwm_DEV-2.3.6-x86_64_s700|jwm_DEV|2.3.6-x86_64_s700||Desktop|20||jwm_DEV-2.3.6-x86_64_s700.pet|+jwm|jwm development|slackware64|14.2||
+jwm_DOC-2.3.6-x86_64_s700|jwm_DOC|2.3.6-x86_64_s700||Desktop|64||jwm_DOC-2.3.6-x86_64_s700.pet|+jwm|jwm documentation||||
+jwm_NLS-2.3.6-x86_64_s700|jwm_NLS|2.3.6-x86_64_s700||Desktop|204||jwm_NLS-2.3.6-x86_64_s700.pet|+jwm|jwm locales||||
+kernel-headers-musl-3.12.6.5-noarch_s700|kernel-headers-musl|3.12.6.5-noarch_s700||BuildingBlock|4988||kernel-headers-musl-3.12.6.5-noarch_s700.pet||sanitised Linux headers suitable for musl||||
 lame-3.99.5-x86_64_s700|lame|3.99.5-x86_64_s700||BuildingBlock|1252||lame-3.99.5-x86_64_s700.pet|+ncurses|the best mp3 encoder|slackware64|14.2||
 lame_DEV-3.99.5-x86_64_s700|lame_DEV|3.99.5-x86_64_s700||BuildingBlock|904||lame_DEV-3.99.5-x86_64_s700.pet|+lame|lame development|slackware64|14.2||
 lame_DOC-3.99.5-x86_64_s700|lame_DOC|3.99.5-x86_64_s700||BuildingBlock|316||lame_DOC-3.99.5-x86_64_s700.pet|+lame|lame documentation||||
@@ -249,6 +268,9 @@ minidlna_NLS-1.1.4-x86_64_s700|minidlna_NLS|1.1.4-x86_64_s700||Multimedia|160||m
 mirdir_DEV-2.1-x86_64_s700|mirdir_DEV|2.1-x86_64_s700||BuildingBlock|20||mirdir_DEV-2.1-x86_64_s700.pet|+mirdir|mirdir development|slackware64|14.2||
 mkwallpaper-0.8-x86_64_s700|mkwallpaper|0.8-x86_64_s700||Graphics|32||mkwallpaper-0.8-x86_64_s700.pet||custom simple puppy wallpapers|slackware64|14.2||
 mkwallpaper_DEV-0.8-x86_64_s700|mkwallpaper_DEV|0.8-x86_64_s700||Graphics|20||mkwallpaper_DEV-0.8-x86_64_s700.pet|+mkwallpaper|mkwallpaper development|slackware64|14.2||
+mokutil-0.4.0-x86_64_s702|mokutil|0.4.0-x86_64_s702||BuildingBlock|72||mokutil-0.4.0-x86_64_s702.pet|+gnu-efi,+efivar|Utility to manipulate secure boot certificates|slackware64|14.2||
+mokutil_DEV-0.4.0-x86_64_s702|mokutil_DEV|0.4.0-x86_64_s702||BuildingBlock|20||mokutil_DEV-0.4.0-x86_64_s702.pet|+mokutil|mokutil development|slackware64|14.2||
+mokutil_DOC-0.4.0-x86_64_s702|mokutil_DOC|0.4.0-x86_64_s702||BuildingBlock|28||mokutil_DOC-0.4.0-x86_64_s702.pet|+mokutil|mokutil documentation||||
 MPlayer-1.3.0-x86_64_s701|MPlayer|1.3.0-x86_64_s701||Multimedia|16556||MPlayer-1.3.0-x86_64_s701.pet|+ffmpeg|Media player for audio and video|slackware64|14.2||
 MPlayer_DEV-1.3.0-x86_64_s701|MPlayer_DEV|1.3.0-x86_64_s701||Multimedia|20||MPlayer_DEV-1.3.0-x86_64_s701.pet|+MPlayer|MPlayer development|slackware64|14.2||
 MPlayer_DOC-1.3.0-x86_64_s701|MPlayer_DOC|1.3.0-x86_64_s701||Multimedia|360||MPlayer_DOC-1.3.0-x86_64_s701.pet|+MPlayer|MPlayer documentation||||
@@ -258,7 +280,8 @@ mtpaint_DOC-3.49.12-x86_64_s700|mtpaint_DOC|3.49.12-x86_64_s700||Graphic|28||mtp
 mtpaint_NLS-3.49.12-x86_64_s700|mtpaint_NLS|3.49.12-x86_64_s700||Graphic|1088||mtpaint_NLS-3.49.12-x86_64_s700.pet|+mtpaint|mtpaint locales||||
 mtp_phone_connect-160703-x86_64_s700|mtp_phone_connect|160703-x86_64_s700||Filesystem|176||mtp_phone_connect-160703-x86_64_s700.pet|+gtk+2,+fuse|Connect Android phones and tablets over usb|slackware64|14.2||
 mtp_phone_connect_DEV-160703-x86_64_s700|mtp_phone_connect_DEV|160703-x86_64_s700||Filesystem|20||mtp_phone_connect_DEV-160703-x86_64_s700.pet|+mtp_phone_connect|mtp_phone_connect development|slackware64|14.2||
-musl-1.1.16-x86_64_s700|musl|1.1.16-x86_64_s700||BuildingBlock|4520||musl-1.1.16-x86_64_s700.pet||Alternative LibC library for Linux|slackware64|14.2||
+musl-1.1.22-x86_64_s700|musl|1.1.22-x86_64_s700||BuildingBlock|640||musl-1.1.22-x86_64_s700.pet||Alternative LibC library for Linux|slackware64|14.2||
+musl_DEV-1.1.22-x86_64_s700|musl_DEV|1.1.22-x86_64_s700||BuildingBlock|3892||musl_DEV-1.1.22-x86_64_s700.pet|+musl|musl development|slackware64|14.2||
 nbtscan-1.0.35-x86_64_s700|nbtscan|1.0.35-x86_64_s700||BuildingBlock|52||nbtscan-1.0.35-x86_64_s700.pet||NETBIOS nameserver scanner|slackware64|14.2||
 nbtscan_DEV-1.0.35-x86_64_s700|nbtscan_DEV|1.0.35-x86_64_s700||BuildingBlock|20||nbtscan_DEV-1.0.35-x86_64_s700.pet|+nbtscan|nbtscan development|slackware64|14.2||
 nenscript-1.13.3-x86_64_s700|nenscript|1.13.3-x86_64_s700||BuildingBlock|56||nenscript-1.13.3-x86_64_s700.pet||Text file to Postscript converter|slackware64|14.2||
@@ -294,6 +317,8 @@ osxcart-1.2.0-x86_64_s700|osxcart|1.2.0-x86_64_s700||BuildingBlock|184||osxcart-
 osxcart_DEV-1.2.0-x86_64_s700|osxcart_DEV|1.2.0-x86_64_s700||BuildingBlock|868||osxcart_DEV-1.2.0-x86_64_s700.pet|+osxcart|osxcart development|slackware64|14.2||
 osxcart_DOC-1.2.0-x86_64_s700|osxcart_DOC|1.2.0-x86_64_s700||BuildingBlock|256||osxcart_DOC-1.2.0-x86_64_s700.pet|+osxcart|osxcart documentation||||
 osxcart_NLS-1.2.0-x86_64_s700|osxcart_NLS|1.2.0-x86_64_s700||BuildingBlock|32||osxcart_NLS-1.2.0-x86_64_s700.pet|+osxcart|osxcart locales||||
+p7zip-16.02-x86_64_s701|p7zip|16.02-x86_64_s701||BuildingBlock|7208||p7zip-16.02-x86_64_s701.pet||file archiver with the highest compression ratio|slackware64|14.2||
+p7zip_DEV-16.02-x86_64_s701|p7zip_DEV|16.02-x86_64_s701||BuildingBlock|20||p7zip_DEV-16.02-x86_64_s701.pet|+p7zip|p7zip development|slackware64|14.2||
 palemoon-27.3.0-x86_64_s700|palemoon|27.3.0-x86_64_s700||Internet|133804||palemoon-27.3.0-x86_64_s700.pet|+gtk2+,+zlib|A lighter weight browser based on Firefox|slackware64|14.2||
 palemoon_DEV-27.3.0-x86_64_s700|palemoon_DEV|27.3.0-x86_64_s700||Internet|24||palemoon_DEV-27.3.0-x86_64_s700.pet|+palemoon|palemoon development|slackware64|14.2||
 parcellite-1.2.1-x86_64_s700|parcellite|1.2.1-x86_64_s700||Document|144||parcellite-1.2.1-x86_64_s700.pet|+gtk+2|Parcellite is a lightweight GTK+ clipboard manager|slackware64|14.2||
@@ -303,10 +328,10 @@ pipepanic_DEV-0.1.3-x86_64_s700|pipepanic_DEV|0.1.3-x86_64_s700||Fun|20||pipepan
 pjproject-2.6-x86_64_s700|pjproject|2.6-x86_64_s700||BuildingBlock|4||pjproject-2.6-x86_64_s700.pet||psjua engine for Psip||||
 pjproject_DEV-2.6-x86_64_s700|pjproject_DEV|2.6-x86_64_s700||BuildingBlock|9104||pjproject_DEV-2.6-x86_64_s700.pet|+pjproject|pjproject development|slackware64|14.2||
 plib_DEV-1.8.5-x86_64_s700|plib_DEV|1.8.5-x86_64_s700||BuildingBlock|4348||plib_DEV-1.8.5-x86_64_s700.pet|+plib|plib development|slackware64|14.2||
-pmcputemp-0.50-x86_64_s700|pmcputemp|0.50-x86_64_s700||System|56||pmcputemp-0.50-x86_64_s700.pet|+gtk+2,+cairo|A simple tray cpu temperature monitor|slackware64|14.2||
-pmcputemp_DEV-0.50-x86_64_s700|pmcputemp_DEV|0.50-x86_64_s700||System|20||pmcputemp_DEV-0.50-x86_64_s700.pet|+pmcputemp|pmcputemp development|slackware64|14.2||
-pmcputemp_DOC-0.50-x86_64_s700|pmcputemp_DOC|0.50-x86_64_s700||System|24||pmcputemp_DOC-0.50-x86_64_s700.pet|+pmcputemp|pmcputemp documentation||||
-pmcputemp_NLS-0.50-x86_64_s700|pmcputemp_NLS|0.50-x86_64_s700||System|76||pmcputemp_NLS-0.50-x86_64_s700.pet|+pmcputemp|pmcputemp locales||||
+pmcputemp-0.72-x86_64_s702|pmcputemp|0.72-x86_64_s702||Desktop|64||pmcputemp-0.72-x86_64_s702.pet|+gtk+2,+cairo|A simple tray cpu temperature monitor|slackware64|14.2||
+pmcputemp_DEV-0.72-x86_64_s702|pmcputemp_DEV|0.72-x86_64_s702||Desktop|20||pmcputemp_DEV-0.72-x86_64_s702.pet|+pmcputemp|pmcputemp development|slackware64|14.2||
+pmcputemp_DOC-0.72-x86_64_s702|pmcputemp_DOC|0.72-x86_64_s702||Desktop|24||pmcputemp_DOC-0.72-x86_64_s702.pet|+pmcputemp|pmcputemp documentation||||
+pmcputemp_NLS-0.72-x86_64_s702|pmcputemp_NLS|0.72-x86_64_s702||Desktop|88||pmcputemp_NLS-0.72-x86_64_s702.pet|+pmcputemp|pmcputemp locales||||
 pmusic_PLUGIN_tray-0.6-x86_64|pmusic_PLUGIN_tray|0.6-x86_64||BuildingBlock|40K||pmusic_PLUGIN_tray-0.6-x86_64.pet|+pmusic|tray icon for pmusic|slackware64|14.0||
 pnscan-1.11-x86_64_s700|pnscan|1.11-x86_64_s700||BuildingBlock|40||pnscan-1.11-x86_64_s700.pet||network scanner|slackware64|14.2||
 pnscan_DEV-1.11-x86_64_s700|pnscan_DEV|1.11-x86_64_s700||BuildingBlock|20||pnscan_DEV-1.11-x86_64_s700.pet|+pnscan|pnscan development|slackware64|14.2||
@@ -327,14 +352,17 @@ redshift_NLS-1.11-x86_64_s700|redshift_NLS|1.11-x86_64_s700||BuildingBlock|572||
 retrovol-14.1-3-x86_64_s700|retrovol|14.1-3-x86_64_s700||Multimedia|180||retrovol-14.1-3-x86_64_s700.pet|+alsa-lib,+gtk+2|Sound mixer with tray icon and volume control|slackware64|14.2||
 retrovol_DEV-14.1-3-x86_64_s700|retrovol_DEV|14.1-3-x86_64_s700||Multimedia|20||retrovol_DEV-14.1-3-x86_64_s700.pet|+retrovol|retrovol development|slackware64|14.2||
 retrovol_NLS-14.1-3-x86_64_s700|retrovol_NLS|14.1-3-x86_64_s700||Multimedia|48||retrovol_NLS-14.1-3-x86_64_s700.pet|+retrovol|retrovol locales||||
+rox-filer-17wi-x86_64_slack14.2|rox-filer|17wi-x86_64_slack14.2||Filesystem|1292||rox-filer-17wi-x86_64_slack14.2.pet|+gtk+2|Light weight gtk file manager|slackware64|14.2||
+rox-filer_NLS-17wi-x86_64_slack14.2|rox-filer_NLS|17wi-x86_64_slack14.2||Filesystem|256||rox-filer_NLS-17wi-x86_64_slack14.2.pet|+rox-filer|rox-filer locales||||
+rox-filer-translations-17wi-noarch_slack14.2|rox-filer-translations|17wi-noarch_slack14.2||Filesystem|3208||rox-filer-translations-17wi-noarch_slack14.2.pet|+rox-filer|rox-filer pot and po files||||
 rp-pppoe-3.10-x86_64_s700|rp-pppoe|3.10-x86_64_s700||BuildingBlock|224||rp-pppoe-3.10-x86_64_s700.pet||roaring penguin pppoe set up|slackware64|14.2||
 rp-pppoe_DEV-3.10-x86_64_s700|rp-pppoe_DEV|3.10-x86_64_s700||BuildingBlock|20||rp-pppoe_DEV-3.10-x86_64_s700.pet|+rp-pppoe|rp-pppoe development|slackware64|14.2||
 rp-pppoe_DOC-3.10-x86_64_s700|rp-pppoe_DOC|3.10-x86_64_s700||BuildingBlock|152||rp-pppoe_DOC-3.10-x86_64_s700.pet|+rp-pppoe|rp-pppoe documentation||||
 rtmpdump-2.3-x86_64_s700|rtmpdump|2.3-x86_64_s700||BuildingBlock|532||rtmpdump-2.3-x86_64_s700.pet||a streaming media library|slackware64|14.2||
 rtmpdump_DEV-2.3-x86_64_s700|rtmpdump_DEV|2.3-x86_64_s700||BuildingBlock|220||rtmpdump_DEV-2.3-x86_64_s700.pet|+rtmpdump|rtmpdump development|slackware64|14.2||
 rtmpdump_DOC-2.3-x86_64_s700|rtmpdump_DOC|2.3-x86_64_s700||BuildingBlock|48||rtmpdump_DOC-2.3-x86_64_s700.pet|+rtmpdump|rtmpdump documentation||||
-rubix-1.0.6-x86_64_s700|rubix|1.0.6-x86_64_s700||Fun|120||rubix-1.0.6-x86_64_s700.pet||small rubiks cube game|slackware64|14.2||
-rubix_DEV-1.0.6-x86_64_s700|rubix_DEV|1.0.6-x86_64_s700||Fun|20||rubix_DEV-1.0.6-x86_64_s700.pet|+rubix|rubix development|slackware64|14.2||
+rubix-1.0.6-x86_64_s702|rubix|1.0.6-x86_64_s702||Fun|120||rubix-1.0.6-x86_64_s702.pet||small rubiks cube game|slackware64|14.2||
+rubix_DEV-1.0.6-x86_64_s702|rubix_DEV|1.0.6-x86_64_s702||Fun|20||rubix_DEV-1.0.6-x86_64_s702.pet|+rubix|rubix development|slackware64|14.2||
 rxvt-unicode-9.22-x86_64_s700|rxvt-unicode|9.22-x86_64_s700||BuildingBlock|1152||rxvt-unicode-9.22-x86_64_s700.pet||Unicode terminal emulator|slackware64|14.2||
 rxvt-unicode_DEV-9.22-x86_64_s700|rxvt-unicode_DEV|9.22-x86_64_s700||BuildingBlock|20||rxvt-unicode_DEV-9.22-x86_64_s700.pet|+rxvt-unicode|rxvt-unicode development|slackware64|14.2||
 rxvt-unicode_DOC-9.22-x86_64_s700|rxvt-unicode_DOC|9.22-x86_64_s700||BuildingBlock|228||rxvt-unicode_DOC-9.22-x86_64_s700.pet|+rxvt-unicode|rxvt-unicode documentation||||
@@ -345,6 +373,9 @@ sane-backends-1.0.25-x86_64_s700|sane-backends|1.0.25-x86_64_s700||BuildingBlock
 sane-backends_DEV-1.0.25-x86_64_s700|sane-backends_DEV|1.0.25-x86_64_s700||BuildingBlock|428||sane-backends_DEV-1.0.25-x86_64_s700.pet|+sane-backends|sane-backends development|slackware64|14.2||
 sane-backends_DOC-1.0.25-x86_64_s700|sane-backends_DOC|1.0.25-x86_64_s700||BuildingBlock|3960||sane-backends_DOC-1.0.25-x86_64_s700.pet|+sane-backends|sane-backends documentation||||
 sane-backends_NLS-1.0.25-x86_64_s700|sane-backends_NLS|1.0.25-x86_64_s700||BuildingBlock|1532||sane-backends_NLS-1.0.25-x86_64_s700.pet|+sane-backends|sane-backends locales||||
+sbsigntools-0.9.1-x86_64_s702|sbsigntools|0.9.1-x86_64_s702||BuildingBlock|332||sbsigntools-0.9.1-x86_64_s702.pet|+keyutils,+help2man|tool for signing efi trusted binaries|slackware64|14.2||
+sbsigntools_DEV-0.9.1-x86_64_s702|sbsigntools_DEV|0.9.1-x86_64_s702||BuildingBlock|20||sbsigntools_DEV-0.9.1-x86_64_s702.pet|+sbsigntools|sbsigntools development|slackware64|14.2||
+sbsigntools_DOC-0.9.1-x86_64_s702|sbsigntools_DOC|0.9.1-x86_64_s702||BuildingBlock|40||sbsigntools_DOC-0.9.1-x86_64_s702.pet|+sbsigntools|sbsigntools documentation||||
 schroedinger-1.0.11-x86_64_s700|schroedinger|1.0.11-x86_64_s700||BuildingBlock|908||schroedinger-1.0.11-x86_64_s700.pet|+orc|Library for en/de-coding video in the Dirac format|slackware64|14.2||
 schroedinger_DEV-1.0.11-x86_64_s700|schroedinger_DEV|1.0.11-x86_64_s700||BuildingBlock|216||schroedinger_DEV-1.0.11-x86_64_s700.pet|+schroedinger|schroedinger development|slackware64|14.2||
 schroedinger_DOC-1.0.11-x86_64_s700|schroedinger_DOC|1.0.11-x86_64_s700||BuildingBlock|812||schroedinger_DOC-1.0.11-x86_64_s700.pet|+schroedinger|schroedinger documentation||||
@@ -401,6 +432,10 @@ xcur2png_DOC-0.7.0-x86_64_s700|xcur2png_DOC|0.7.0-x86_64_s700||BuildingBlock|24|
 xdelta-30.16-x86_64_s700|xdelta|30.16-x86_64_s700||BuildingBlock|156||xdelta-30.16-x86_64_s700.pet||Opensource binary diff delta differential compression tools|slackware64|14.2||
 xdelta_DEV-30.16-x86_64_s700|xdelta_DEV|30.16-x86_64_s700||BuildingBlock|20||xdelta_DEV-30.16-x86_64_s700.pet|+xdelta|xdelta development||||
 xdg_puppy_jwm-0.7.6-x86_64|xdg_puppy_jwm|0.7.6-x86_64||BuildingBlock|24K||xdg_puppy_jwm-0.7.6-x86_64.pet|+gnome-menus|xdg menu generator for jwm|slackware64|14.0||
+xdialog-2020.10-x86_64_s702|xdialog|2020.10-x86_64_s702||BuildingBlock|100||xdialog-2020.10-x86_64_s702.pet|+gtk2|GUI replacement for dialog and cdialog|slackware64|14.2||
+xdialog_DEV-2020.10-x86_64_s702|xdialog_DEV|2020.10-x86_64_s702||BuildingBlock|16||xdialog_DEV-2020.10-x86_64_s702.pet|+xdialog|xdialog development|slackware64|14.2||
+xdialog_DOC-2020.10-x86_64_s702|xdialog_DOC|2020.10-x86_64_s702||BuildingBlock|696||xdialog_DOC-2020.10-x86_64_s702.pet|+xdialog|xdialog documentation||||
+xdialog_NLS-2020.10-x86_64_s702|xdialog_NLS|2020.10-x86_64_s702||BuildingBlock|172||xdialog_NLS-2020.10-x86_64_s702.pet|+xdialog|xdialog locales||||
 xdotool-2.20110530.1-x86_64_s700|xdotool|2.20110530.1-x86_64_s700||BuildingBlock|132||xdotool-2.20110530.1-x86_64_s700.pet||commandline tool for fake button and key presses|slackware64|14.2||
 xdotool_DEV-2.20110530.1-x86_64_s700|xdotool_DEV|2.20110530.1-x86_64_s700||BuildingBlock|52||xdotool_DEV-2.20110530.1-x86_64_s700.pet|+xdotool|xdotool development|slackware64|14.2||
 xdotool_DOC-2.20110530.1-x86_64_s700|xdotool_DOC|2.20110530.1-x86_64_s700||BuildingBlock|60||xdotool_DOC-2.20110530.1-x86_64_s700.pet|+xdotool|xdotool documentation||||

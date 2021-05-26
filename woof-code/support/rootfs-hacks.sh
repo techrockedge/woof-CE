@@ -126,6 +126,7 @@ done
 [ -e ${SR}/etc/sudoers ] && chmod 640 ${SR}/etc/sudoers
 [ -e ${SR}/tmp ] && chmod 1777 ${SR}/tmp
 [ -e ${SR}/var ] && chmod 777 ${SR}/var
+[ -e ${SR}/var/local ] && chmod 1777 ${SR}/var/local
 
 # ensure application_x-bittorrent is assigned to defaulttorrent..
 if [ -f ${SR}/etc/xdg/rox.sourceforge.net/MIME-types/application_x-bittorrent ] ; then
@@ -191,12 +192,6 @@ done
 [ -d ${SR}/usr/share/xine/libxine1/fonts ] && rm -rf ${SR}/usr/share/xine/libxine1/fonts
 [ -f ${SR}/usr/share/applications/qv4l2.desktop ] && rm ${SR}/usr/share/applications/qv4l2.desktop #slackware
 
-# in puppy 'run' is a relative link to 'tmp'
-if [ -d ${SR}/run ] && [ ! -L ${SR}/run ] ; then
-	rm -rf ${SR}/run
-	ln -sv tmp ${SR}/run
-fi
-
 # gutenprint_FIXUPHACK
 if [ -d ${SR}/usr/share/gutenprint/samples ] ; then
 	rm -rf ${SR}/usr/share/gutenprint/samples
@@ -252,5 +247,18 @@ do
 	[ -f $i ] || continue
 	${i} "$@"
 done
+
+#pwsget and pmirrorget: replace old mini-icons
+if [ -e ${SR}/usr/sbin/pwsget ] ; then
+	sed -i \
+		-e 's%<input file>/usr/local/lib/X11/mini.*%<input file>/usr/share/pixmaps/puppy/open.svg</input> <height>20</height>%' \
+			${SR}/usr/sbin/pwsget
+fi
+
+if [ -e ${SR}/usr/bin/pmwget ] ; then
+	sed -i \
+		-e 's%<input file>/usr/local/lib/X11/mini.*%<input file>/usr/share/pixmaps/puppy/apply.svg</input> <height>20</height>%' \
+			${SR}/usr/bin/pmwget
+fi
 
 ### END ###

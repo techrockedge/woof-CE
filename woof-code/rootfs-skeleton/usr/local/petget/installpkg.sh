@@ -57,10 +57,12 @@ APPDIR=$(dirname $0)
 [ -f "$APPDIR/i18n_head" ] && source "$APPDIR/i18n_head"
 LANG_USER=$LANG
 export LANG=C
-. /etc/rc.d/PUPSTATE  #this has PUPMODE and SAVE_LAYER.
+[ -e /etc/rc.d/PUPSTATE ] && . /etc/rc.d/PUPSTATE  #this has PUPMODE and SAVE_LAYER.
 . /etc/DISTRO_SPECS #has DISTRO_BINARY_COMPAT, DISTRO_COMPAT_VERSION
 
 . /etc/xdg/menus/hierarchy #w478 has PUPHIERARCHY variable.
+
+[ "$PUPMODE" == "" ] && PUPMODE=2
 
 [ "$PUPMODE" = "2" ] && [ ! -d /audit ] && mkdir -p /audit
 
@@ -71,6 +73,7 @@ DL_SAVE_FLAG=$(cat /var/local/petget/nd_category 2>/dev/null)
 
 clean_and_die () {
   rm -f /root/.packages/${DLPKG_NAME}.files
+  [ "$PUPMODE" != "2" ] && busybox mount -t aufs -o remount,udba=reval unionfs / #remount with faster evaluation mode.
   exit 1
 }
 
@@ -116,7 +119,30 @@ install_path_check() {
 
 #get the pkg name ex: scite-1.77 ...
 dbPATTERN='|'"$DLPKG_BASE"'|'
+
 DLPKG_NAME="`cat /tmp/petget_proc/petget_missing_dbentries-Packages-* | grep "$dbPATTERN" | head -n 1 | cut -f 1 -d '|'`"
+
+if [ "$DLPKG_NAME" == "" ]; then
+
+ #fallback if DLPKG_NAME was empty
+
+ case $DLPKG_BASE in
+  *.pet) EXT=".pet" ;;
+  *.deb) EXT=".deb" ;;
+  *.tgz) EXT=".tgz" ;;
+  *.txz) EXT=".txz" ;;
+  *.tzst) EXT=".tzst" ;;
+  *.rpm) EXT=".rpm" ;;
+  *.tar.gz) EXT=".tar.gz" ;;
+  *.tar.xz) EXT=".tar.xz" ;;
+  *.tar.zst) EXT=".tar.zst" ;;
+  *) EXT="" ;;
+ esac
+
+ DLPKG_NAME="$(basename "$DLPKG_BASE" $EXT)"
+
+fi
+
 
 #131222 do not allow duplicate installs...
 PTN1='^'"$DLPKG_NAME"'|'
@@ -293,8 +319,19 @@ case $DLPKG_BASE in
   echo "$PFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
   install_path_check
   #110705 rpm -i does not work for mageia pkgs...
-  exploderpm -i $DLPKG_BASE
+  
+  if [ "$(cpio --help | grep "\-\-directory")" != "" ];  then
+   rpm2cpio $DLPKG_BASE | cpio -idmu -D ${DIRECTSAVEPATH}/
+  else
+   lastpath=$(pwd)
+   cd ${DIRECTSAVEPATH}/
+   rpm2cpio $DLPKG_BASE | cpio -idmu
+  fi
+  
   [ $? -ne 0 ] && clean_and_die
+  
+  [ "$lastpath" != "" ] && cd $lastpath
+  
  ;;
 esac
 
@@ -387,6 +424,9 @@ done
 rm -rf $DIRECTSAVEPATH/install
 rm -rf $DIRECTSAVEPATH/DEBIAN
 
+[ -e $DIRECTSAVEPATH/.MTREE ] && rm -f $DIRECTSAVEPATH/.MTREE
+[ -e $DIRECTSAVEPATH/.BUILDINFO ] && rm -f $DIRECTSAVEPATH/.BUILDINFO
+
 #130314 run arch linux pkg post-install script...
 if [ -f $DIRECTSAVEPATH/.INSTALL ];then #arch post-install script.
  if [ -f /usr/local/petget/ArchRunDotInstalls ];then #precaution. see 3builddistro, script created by noryb009.
@@ -409,6 +449,82 @@ if [ -f $DIRECTSAVEPATH/puninstall.sh ];then
  mv -f $DIRECTSAVEPATH/puninstall.sh /root/.packages/${DLPKG_NAME}.remove
 fi
 
+
+#Look for symbolic links created by post-scripts and update package file list
+#remove temp list first
+rm -rf /tmp/slink-append.txt 2>/dev/null
+
+#List all the library files in the package
+cat /var/packages/${DLPKG_NAME}.files | grep -E '*\.so$|*\.so\.*' > /tmp/libfiles2.txt
+
+#Evaluate the library files
+while IFS= read -r line
+do
+
+if [ -f $line ]; then
+
+  dname3="$(dirname $line)"
+  soname="$(basename $line)"
+  soname2="${soname%*.so.*}"
+  
+  for slink in $(find "$dname3" -name "${soname2}.so*" -maxdepth 1 -type l)
+  do
+    
+   slinkpt="$(echo $slink | sed -e 's#\+#\\\+#g' -e 's#\/#\\\/#g' -e 's#\-#\\\-#g' -e 's#\.#\\\.#g')"
+
+   if [ "$(cat /var/packages/package-files/${DLPKG_NAME}.files | grep -E "${slinkpt}\$")" == "" ]; then
+
+      srcf="$(readlink "$slink" 2>/dev/null)"
+
+      if [ "$srcf" != "" ]; then
+
+        so_bname="$(basename $srcf 2>/dev/null)"
+        srcfpt="$(echo "$so_bname" | sed -e 's#\+#\\\+#g' -e 's#\/#\\\/#g' -e 's#\-#\\\-#g' -e 's#\.#\\\.#g')"
+
+	    #check if the source file of the symlink was correct
+        if [ "$so_bname" != "" ] && [ "$so_bname" == "$soname" ]; then  
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	      echo "$slink" >> /tmp/slink-append.txt
+	     fi
+	     
+	    #Check if the source symlink already on the package file list 
+	    elif [ "$so_bname" != "" ] && [ "$(cat /var/packages/package-files/${DLPKG_NAME}.files  | grep -E "\/${srcfpt}\$")" != "" ]; then
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat cat /var/packages/package-files/*.files 2>/dev/null | grep -E "${slinkpt}\$")" == "" ]; then
+	      if [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	       echo "$slink" >> /tmp/slink-append.txt
+	      fi
+	     fi
+	    
+	    #Check if the source symlink was owned by other packages
+        elif [ "$so_bname" != "" ] && [ "$(cat /var/packages/package-files/*.files 2>/dev/null | grep -E "\/${srcfpt}\$")" == "" ]; then
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat cat /var/packages/package-files/*.files 2>/dev/null | grep -E "${slinkpt}\$")" == "" ]; then
+	      if [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	       echo "$slink" >> /tmp/slink-append.txt
+	      fi
+	     fi
+        fi
+        
+      fi
+      
+    fi
+
+   done
+   
+fi
+
+done < /tmp/libfiles2.txt
+
+
+[ -e /tmp/slink-append.txt ] && cat /tmp/slink-append.txt >> /var/packages/${DLPKG_NAME}.files
+rm -rf /tmp/slink-append.txt 2>/dev/null
+
+
 #w465 <pkgname>.pet.specs is in older pet pkgs, just dump it...
 #maybe a '$APKGNAME.pet.specs' file created by dir2pet script...
 rm -f $DIRECTSAVEPATH/*.pet.specs 2>/dev/null
@@ -423,6 +539,11 @@ else
  [ -f $DIRECTSAVEPATH/pet.specs ] && rm -f $DIRECTSAVEPATH/pet.specs #w482 remove zero-byte file.
  dlPATTERN='|'"`echo -n "$DLPKG_BASE" | sed -e 's%\\-%\\\\-%'`"'|'
  DB_ENTRY="`cat /tmp/petget_proc/petget_missing_dbentries-Packages-* | grep "$dlPATTERN" | head -n 1`"
+ 
+ if [ "$DB_ENTRY" == "" ]; then
+  DB_ENTRY="$DLPKG_NAME|$DLPKG_NAME|1.0.0|1||||${DLPKG_BASE}|||"
+ fi
+
 fi
 ##+++2011-12-27 KRG check if $DLPKG_BASE matches DB_ENTRY 1 so uninstallation works :Ooops:
 db_pkg_name=`echo "$DB_ENTRY" |cut -f 1 -d '|'`
@@ -588,9 +709,60 @@ if [ "$DESKTOPFILE" != "" ];then
  fi
 fi
 
-#If there is an already installed package, just update the package files list and its database entry
+
 xpkgname="$(echo "$DB_ENTRY" | cut -f 2 -d '|')"
-installed_pkg="$(cat /root/.packages/user-installed-packages | grep "|$xpkgname|")"
+installed_pkg="$(cat /var/packages/user-installed-packages | grep "|$xpkgname|")"
+
+PKGDEP="$(echo "$DB_ENTRY" | cut -f 9 -d '|')"
+PKGDESC="$(echo "$DB_ENTRY" | cut -f 10 -d '|')"
+PKGCAT="$(echo "$DB_ENTRY" | cut -f 5 -d '|')"
+
+
+#Final package entry fix. Look for package database for closest package information if deps/description/category is missing
+if [ "$PKGDEP" == "" ] || [ "$PKGDESC" == "" ] || [ "$PKGCAT" == "" ]; then
+ 
+ if [ -e /var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} ]; then
+  DBREF="/var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}"
+ elif [ -e /var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}-official ]; then
+  DBREF="/var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}-official"
+ fi
+ 
+ if [ "$DBREF" != "" ]; then
+
+  FDEP="$PKGDEP"
+  FDESC="$PKGDESC"
+  FCAT="$PKGCAT"
+ 
+  nPKG="$(cat "$DBREF" | grep "|$xpkgname|" | head -n 1)"
+  
+  if [ "$nPKG" != "" ]; then
+   [ "$PKGDEP" == "" ] && FDEP="$(echo "$nPKG" | cut -f 9 -d '|')"
+   [ "$PKGDESC" == "" ]  && FDESC="$(echo "$nPKG" | cut -f 10 -d '|')"
+   [ "$PKGCAT" == "" ] && FCAT="$(echo "$nPKG" | cut -f 5 -d '|')"
+  fi
+  
+  #Rebuilt package entry
+  
+  pkgname="$(echo "$DB_ENTRY" | cut -f 1 -d '|')"
+  nameonly="$(echo "$DB_ENTRY" | cut -f 2 -d '|')"
+  version="$(echo "$DB_ENTRY" | cut -f 3 -d '|')"
+  pkgrelease="$(echo "$DB_ENTRY" | cut -f 4 -d '|')"
+  size="${PKGSIZEK}K"
+  path="$(echo "$DB_ENTRY" | cut -f 7 -d '|')"
+  fullfilename="$(echo "$DB_ENTRY" | cut -f 8 -d '|')"
+  compileddistro="$(echo "$DB_ENTRY" | cut -f 11 -d '|')"
+  compiledrelease="$(echo "$DB_ENTRY" | cut -f 12 -d '|')"
+  repo="$(echo "$DB_ENTRY" | cut -f 13 -d '|')"
+  
+  DB_ENTRY="$pkgname|$nameonly|$version|$pkgrelease|$FCAT|$size|$path|$fullfilename|$FDEP|$FDESC|$compileddistro|$compiledrelease|$repo|"
+  
+ fi
+ 
+fi
+
+#If there is an already installed package, just update the package files list and its database entry
+
+PKGUPDOWN=""
 
 if [ "$xpkgname" != "" ] && [ "$installed_pkg" != "" ]; then
   #There is an already installed package. Just update the package file list
@@ -606,15 +778,16 @@ if [ "$xpkgname" != "" ] && [ "$installed_pkg" != "" ]; then
 	  #Not a part of newly installed package. Do action
 
 	   #Delete the file which is not a part of upgrade
-	   if [ -e "$xline" ] && [ ! -d "$xline" ]; then
+	   if [ -e "$xline" ] || [ -L "$xline" ]; then
 	    
-	    if [ -d "/initrd/pup_rw$xline" ] && [ ! -L "/initrd/pup_rw$xline" ]; then
-	     rm -f "/initrd/pup_rw$xline"
-	    fi
+	    [ -e "/initrd/pup_rw$xline" ] && rm -f "/initrd/pup_rw$xline"
+	    [ -L "/initrd/pup_rw$xline" ] && rm -f "/initrd/pup_rw$xline"
 	    
 	    [ -e "/initrd${SAVE_LAYER}${xline}" ] && rm -f "/initrd${SAVE_LAYER}${xline}"
+	    [ -L "/initrd${SAVE_LAYER}${xline}" ] && rm -f "/initrd${SAVE_LAYER}${xline}"
 	    
 	    [ -e "$xline" ] && rm -f "$xline"
+	    [ -L "$xline" ] && rm -f "$xline"
 	   
 	   fi
 
@@ -628,6 +801,8 @@ if [ "$xpkgname" != "" ] && [ "$installed_pkg" != "" ]; then
 	cp -f /root/.packages/user-installed-packages.tmp /root/.packages/user-installed-packages
 	rm -f  /root/.packages/user-installed-packages.tmp
 	
+	PKGUPDOWN="y"
+	
     else
      echo "$DB_ENTRY" >> /root/.packages/user-installed-packages
     fi
@@ -638,8 +813,36 @@ else
  echo "$DB_ENTRY" >> /root/.packages/user-installed-packages
 fi
 
+if [ $PUPMODE -eq 2 ]; then
+	if [ "$xpkgname" != "" ] && [ "$installed_pkg" == "" ]; then
+	  if [ "$PKGUPDOWN" == "" ]; then
+	    #Check if the old builtin file list exists
+	    if [ -e /root/.packages/builtin_files/${xpkgname} ]; then
+		while IFS= read -r xline
+		do
+		
+		 #Check if the file was a part of the newly installed package
+		 if [ "$(cat /root/.packages/${DLPKG_NAME}.files | grep "$xline")" == "" ]; then
+		  #Not a part of newly installed package. Do action
+
+		   #Delete the file which is not a part of upgrade
+		   if [ -e "$xline" ] || [ -L "$xline" ]; then
+		    [ -e "$xline" ] && rm -f "$xline"
+		    [ -L "$xline" ] && rm -f "$xline"
+		   fi
+		   
+		 fi
+		done < /root/.packages/builtin_files/${xpkgname}
+	    fi
+	  fi
+	fi
+fi
+
+
+
 #120907 post-install hacks...
 /usr/local/petget/hacks-postinstall.sh $DLPKG_MAIN
+/usr/local/petget/hacks-postinstall2.sh "/root/.packages/${DLPKG_NAME}.files" 2>/dev/null
 
 #announcement of successful install...
 #announcement is done after all downloads, in downloadpkgs.sh...

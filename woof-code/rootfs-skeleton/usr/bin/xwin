@@ -19,7 +19,7 @@
 export TEXTDOMAIN=xwin
 export OUTPUT_CHARSET=UTF-8
 
-if ! which Xorg >/dev/null 2>&1 ; then
+if ! command -v Xorg startxwayland >/dev/null 2>&1 ; then
 	exit
 fi
 
@@ -29,11 +29,13 @@ else
 	LOGFILE_X='/tmp/xerrs.log'
 fi
 
-if [ `id -u` -eq 0 ] && [ -h /usr/bin/X ] ; then
+startxwayland=`command -v startxwayland`
+
+if [ -z "$startxwayland" ] && [ `id -u` -eq 0 ] && [ -h /usr/bin/X ] ; then
 	ln -snf Xorg /usr/bin/X
 fi
 
-if [ "$1" = "-default" ] ; then
+if [ -z "$startxwayland" -a "$1" = "-default" ] ; then
 	xorgwizard-automatic
 	shift
 fi
@@ -46,6 +48,148 @@ cd ~/
 . /etc/DISTRO_SPECS # PUPMODE=current operating configuration,
 . /etc/rc.d/BOOTCONSTRAINED
 
+reset_monitor_settings() {
+
+rm -f /var/lib/gdm/.config/monitors.xml 2>/dev/null
+
+for lxpath2 in /etc/xdg /root/.config
+do 
+ if [ -e $lxpath2/autostart/lxrandr-autostart.desktop ]; then
+  rm -f $lxpath2/autostart/lxrandr-autostart.desktop 2>/dev/null
+ fi
+done
+
+for xfcepath in /etc/xdg/xfce4 /etc/xdg/xfce /root/.config/xfce4 /root/.config/xfce
+do
+
+ if [ -e $xfcepath/xfconf/xfce-perchannel-xml/displays.xml ]; then
+echo '<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="displays" version="1.0">
+  <property name="Notify" type="bool" value="true"/>
+</channel>' > $xfcepath/xfconf/xfce-perchannel-xml/displays.xml
+ fi
+
+done
+
+rm -f /root/.screenlayout/* 2>/dev/null
+rm -f /root/.config/monitors.xml 2>/dev/null
+rm -f /root/.kde/share/apps/kscreen/* 2>/dev/null
+rm -f /root/.kde/local/share/apps/kscreen/* 2>/dev/null
+rm -f /root/.kde/share/config/krandrc 2>/dev/null
+rm -f /root/.kde4/share/apps/kscreen/* 2>/dev/null
+rm -f /root/.kde4/local/share/apps/kscreen/* 2>/dev/null
+rm -f /root/.kde4/share/config/krandrc 2>/dev/null
+rm -f /root/.local/share/kscreen/* 2>/dev/null
+rm -f /root/.zarfy/* 2>/dev/null
+
+if [ -d /home ]; then
+
+ for lxf in $(find /home -name "lxrandr-autostart.desktop" -type f | grep "/.config/autostart/")	
+ do
+  if [ "$lxf" != "" ]; then
+	rm -f $lxf 
+  fi
+ done
+ 
+ for usr1 in $(ls -1 /home 2>/dev/null | tr '\n' ' ')
+ do
+
+	if [ -f /home/$usr1/.config/xfce4/xfconf/xfce-perchannel-xml/displays.xml ]; then
+	echo '<?xml version="1.0" encoding="UTF-8"?>
+
+	<channel name="displays" version="1.0">
+	  <property name="Notify" type="bool" value="true"/>
+	</channel>' > /home/$usr1/.config/xfce4/xfconf/xfce-perchannel-xml/displays.xml
+	fi
+
+	if [ -f /home/$usr1/.config/xfce/xfconf/xfce-perchannel-xml/displays.xml ]; then
+	echo '<?xml version="1.0" encoding="UTF-8"?>
+
+	<channel name="displays" version="1.0">
+	  <property name="Notify" type="bool" value="true"/>
+	</channel>' > /home/$usr1/.config/xfce/xfconf/xfce-perchannel-xml/displays.xml
+	fi
+
+	  rm -f /home/$usr1/.screenlayout/* 2>/dev/null
+	  rm -f /home/$usr1/.config/monitors.xml 2>/dev/null
+	  rm -f /home/$usr1/.kde/share/apps/kscreen/* 2>/dev/null
+	  rm -f /home/$usr1/.kde/local/share/apps/kscreen/* 2>/dev/null
+	  rm -f /home/$usr1/.kde/share/config/krandrc 2>/dev/null
+	  rm -f /home/$usr1/.kde4/share/apps/kscreen/* 2>/dev/null
+	  rm -f /home/$usr1/.kde4/local/share/apps/kscreen/* 2>/dev/null
+	  rm -f /home/$usr1/.kde4/share/config/krandrc 2>/dev/null
+	  rm -f /home/$usr1/.local/share/kscreen/* 2>/dev/null
+	  rm -f /home/$usr1/.zarfy/* 2>/dev/null
+	  
+ done
+ 
+fi
+		
+}
+
+get_edid_hash() {
+
+for medid in $(ls -1 /sys/class/drm/*/edid 2>/dev/null | grep "card" | grep "-")
+do
+ sc1="$(dirname $medid)/status"
+ if [ "$(cat $sc1)" == "connected" ]; then
+  md5sum $medid
+ fi
+done
+		
+}
+
+config_video() {
+	
+if [ ! -d /var/hwdata ]; then
+ mkdir -p /var/hwdata
+fi
+
+if [ -n "$startxwayland" ]; then
+ xConfig=0
+elif [ ! -f /var/hwdata/screen.lst ]; then
+ xConfig=1
+elif [ ! -f /var/hwdata/videocards.lst ]; then
+ xConfig=1
+else
+ xConfig=0
+fi	
+
+if [ $xConfig -eq 0 ]; then
+
+    vlist="$(busybox lspci | grep "Class 03" | cut -c 21-29 | sort)"
+    ocard="$(cat /var/hwdata/videocards.lst 2>/dev/null)"
+    
+    #Check if video card change
+    if [ "$vlist" != "$ocard" ]; then
+      #Video card change. Remember videocard
+      echo "$vlist" > /var/hwdata/videocards.lst
+      xConfig=1
+    else
+     xScreens="$(get_edid_hash)"
+     oScreens="$(cat /var/hwdata/screen.lst 2>/dev/null)"
+      #Check if screen doesn't change
+       if [ "$xScreens" != "$oScreens" ]; then
+         #Screen setup changed. Remember screen setup
+         echo "$xScreens" > /var/hwdata/screen.lst
+	 xConfig=1
+       fi
+    fi
+    
+fi
+
+if [ $xConfig -ne 0 ]; then
+  xorgwizard-automatic 
+  reset_monitor_settings
+  busybox lspci | grep "Class 03" | cut -c 21-29 | sort > /var/hwdata/videocards.lst
+  get_edid_hash > /var/hwdata/screen.lst
+fi
+	
+}
+
+
+
 # automatic network reconnect. refer /usr/sbin/hostname-set
 if [ -f /tmp/services/network_default_reconnect_required_flag ];then
 	rm -f /tmp/services/network_default_reconnect_required_flag
@@ -56,11 +200,38 @@ fi
 # enables to start a specific w.m. from commandline...
 # this can also be an app that stars a desktop environment..
 if [ "$1" ] ; then
-	if [ ! "`which $1 2>/dev/null`" ] && [ ! -x $1 ] ; then
-		echo "* $1 does not exist or is not a valid executable.."
-		exit 1
-	fi
-	echo -n "$1" > /etc/windowmanager # /root/.xinitrc uses this file.
+
+ DEXEC="$1"
+
+ case $DEXEC in
+ lxde)
+  if [ "$(which startlxde)" != "" ]; then
+   DEXEC="startlxde"
+  else
+   DEXEC="lxde-session"
+  fi
+ ;;
+ xfce|xfce4|gnome|lxqt|razor|mate|cinnamon)
+  DEXEC="$DEXEC-session"
+ ;;
+ kde|tde|fluxbox) 
+  DEXEC="start$DEXEC"
+ ;;
+ enlightenment) 
+  DEXEC="enlightenment_start"
+ ;;
+ windowmaker) 
+  DEXEC="wmaker"
+ ;;
+esac
+
+if [ ! "`which $DEXEC 2>/dev/null`" ] && [ ! -x $DEXEC ] ; then
+	echo "* $DEXEC does not exist or is not a valid executable.."
+	exit 1
+fi
+
+ echo -n "$DEXEC" > /etc/windowmanager # /root/.xinitrc uses this file.
+
 fi
 
 # in some very strange situations this file might be empty
@@ -68,7 +239,7 @@ fi
 
 # Puppy Xorg Video Wizard...
 # boot param pfix=xorgwizard
-if [ -f /tmp/xwin_xorgwizard_cli ] ; then 
+if [ -z "$startxwayland" -a -f /tmp/xwin_xorgwizard_cli ] ; then
 	rm -f /tmp/xwin_xorgwizard_cli
 	xorgwizard-cli
 	xorgwizard-automatic
@@ -91,10 +262,16 @@ elif [ -f /etc/X11/xorg.conf ];then
 else
 	#* /etc/X11/xorg.conf does not exist *
 	rm -f /root/.XLOADED 2> /dev/null #not necessary, precaution.
-	if [ "$DISTRO_XORG_AUTO" != "yes" -o -f /var/local/xwin_no_xorg_auto_flag ] ; then
-		xorgwizard-cli # 1st dialog offers to use Xorg vesa...
+	if [ -z "$startxwayland" ]; then
+		if [ "$DISTRO_XORG_AUTO" != "yes" -o -f /var/local/xwin_no_xorg_auto_flag ] ; then
+			xorgwizard-cli # 1st dialog offers to use Xorg vesa...
+		fi
+		xorgwizard-automatic
 	fi
-	xorgwizard-automatic
+fi
+
+if [ "$(uname -m | grep -E "[i|x]*86")" != "" ] || [ "$(uname -m)" == "x86_64" ]; then
+ [ -z "$startxwayland" ] && config_video
 fi
 
 # J_Reys idea (see note further down)...
@@ -153,7 +330,11 @@ if [ "$LOGFILE_X" = "/dev/null" ] ; then
 	echo 'logging of X errors is disabled' > /tmp/xerrs.log
 	echo 'remove /var/local/xwin_disable_xerrs_log_flag to enable it, then restart X' >> /tmp/xerrs.log
 fi
-/usr/bin/xinit ${XINITRC} -- -br -nolisten tcp > $LOGFILE_X 2>&1
+if [ -n "$startxwayland" ] ; then
+	"$startxwayland" ${XINITRC} > $LOGFILE_X 2>&1
+else
+	/usr/bin/xinit ${XINITRC} -- -br -nolisten tcp > $LOGFILE_X 2>&1
+fi
 #-----------------------------------------------------------------------
 echo -n "false" > /root/.XLOADED #see note above.
 rm -f /tmp/services/x_display
@@ -174,17 +355,21 @@ echo ''$(gettext 'If X failed to start, type "xorgwizard" to setup X')''
 
 # Shutdown menu calls wmreboot, wmpoweroff, wmexit or restartwm, which create this file...
 WMEXITMODE="`cat /tmp/wmexitmode.txt`"
+
 if [ "$WMEXITMODE" = "exit" ];then #see /usr/bin/wmexit.
 	rm -f /tmp/wmexitmode.txt
 	exit
 fi
-[ "$WMEXITMODE" = "poweroff" ] && exec /sbin/poweroff #see /usr/bin/wmpoweroff
-[ "$WMEXITMODE" = "reboot" ] && exec /sbin/reboot #see /usr/bin/wmreboot
+
+[ "$WMEXITMODE" = "poweroff" ] && exec poweroff #see /usr/bin/wmpoweroff
+[ "$WMEXITMODE" = "reboot" ] && exec reboot #see /usr/bin/wmreboot
+[ "$WMEXITMODE" = "shutdown" ] && exec shutdown
 
 # restart window manager...
 # make a gross assumption, if wmexitmode.txt exists, haven't already exited this script, then want
 # to restart maybe with different window manager. /etc/windowmanager already has desired w.m.
 rm -f /tmp/wmexitmode.txt #definitely delete it now.
+
 # thanks GuestToo for advice on this, works with chooselocale script...
 NEWLANG="`cat /etc/profile | grep '^LANG=' | cut -f 2 -d '='`"
 if [ "$NEWLANG" -a "$NEWLANG" != "$LANG" ];then #precaution
@@ -194,9 +379,11 @@ fi
 # hostname-set changed HOSTNAME, via quicksetup, X is restarted,
 # update $HOSTNAME (was exported at bootup in /etc/profile)...
 NEWHOSTNAME="`cat /etc/hostname | tr -d '\n'`"
+
 if [ "$NEWHOSTNAME" -a "$NEWHOSTNAME" != "$HOSTNAME" ];then
 	export HOSTNAME=$NEWHOSTNAME
 fi
+
 exec xwin
 
 ### END ###

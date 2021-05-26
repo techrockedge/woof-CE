@@ -37,9 +37,9 @@ if [ -e ${SR}/usr/share/applications/*[Mm]idori*.desktop ] ; then
 	echo '[Desktop Entry]
 Version=1.0
 Type=Application
-Name=Midori web browser
+Name=Midori
 GenericName=web browser
-Comment=Midori web browser
+Comment=light weight gtk+ web browser
 Categories=WebBrowser
 MimeType=text/html;text/xml;application/xhtml+xml;application/xml;
 Exec=midori
@@ -50,10 +50,18 @@ X-Osso-Type=application/x-executable
 X-Osso-Service=midori' > ${SR}/usr/share/applications/midori.desktop
 fi
 
+# evince
+if [ -e ${SR}/usr/share/applications/evince.desktop ] ; then
+	sed -i \
+		-e 's%Categories=.*%Categories=X-Document-viewer%' \
+			${SR}/usr/share/applications/evince.desktop
+fi
+
 # mpv
 if [ -e ${SR}/usr/share/applications/mpv.desktop ] ; then
 	sed -i \
-		-e 's%Name=.*%Name=mpv Media Player%' \
+		-e 's%Name=.*%Name=mpv%' \
+		-e 's%Comment=.*%Media Player%' \
 		-e 's%Exec=.*%Exec=mpv --player-operation-mode=pseudo-gui%' \
 		-e '/TryExec=/d' \
 		-e 's%Categories=.*%Categories=Player%' \
@@ -75,14 +83,14 @@ if [ -e ${SR}/usr/share/applications/*[Rr]xvt*.desktop ] ; then
 	rm -f ${SR}/usr/share/applications/*[Rr]xvt*.desktop
 	echo '[Desktop Entry]
 Encoding=UTF-8
-Name=Urxvt terminal emulator
+Name=Urxvt
 Icon=/usr/share/pixmaps/puppy/terminal.svg
-Comment=Urxvt terminal emulator
+Comment=terminal emulator
 Exec=urxvt
 Terminal=false
 Type=Application
 Categories=TerminalEmulator
-GenericName=Urxvt' > ${SR}/usr/share/applications/rxvt-unicode.desktop
+GenericName=Urxvt terminal emulator' > ${SR}/usr/share/applications/rxvt-unicode.desktop
 fi
 
 # UExtract
@@ -92,5 +100,35 @@ if [ -e ${SR}/usr/share/applications/UExtract.desktop ] ; then
 		find ${SR}/root/.config/rox.sourceforge.net/OpenWith -mindepth 2 -name UExtract -delete
 	fi
 fi
+
+# psynclient
+if [ -e ${SR}/usr/share/applications/psynclient.desktop ] ; then
+	sed -i \
+		-e 's%Categories=.*%Categories=X-Desktop%' \
+			${SR}/usr/share/applications/psynclient.desktop
+fi
+
+# cups printing
+if [ -e ${SR}/usr/share/applications/cups.desktop -a -e ${SR}/usr/share/applications/printer-wizard.desktop ] ; then
+        rm ${SR}/usr/share/applications/cups.desktop
+fi
+
+#lxrandr
+if [ -e ${SR}/usr/share/applications/lxrandr.desktop ] ; then
+	sed -i \
+		-e 's%Icon=.*%Icon=graphics.svg%' \
+		-e 's%Categories=.*%Categories=X-SetupUtility%' \
+		-e '/NotShowIn=/d' \
+			${SR}/usr/share/applications/lxrandr.desktop
+fi
+
+# pavucontrol
+if [ -e ${SR}/usr/share/applications/pavucontrol.desktop ] ; then
+	sed -i \
+		-e 's%Icon=.*%Icon=sound_mixer.svg%' \
+		-e 's%Categories=.*%Categories=X-Multimedia-sound%' \
+			${SR}/usr/share/applications/pavucontrol.desktop
+fi
+
 
 ### END ###

@@ -7,10 +7,17 @@ export TEXTDOMAIN=dotpup
 
 #how do i called
 MYOPT=$1
-[ "$MYOPT" ] || MYOPT=$(basename $0)
-MYOPT=$(echo $MYOPT | tr -dc '0-9')
+if [ "$MYOPT" ]; then
+  MYOPT=$(echo $MYOPT | tr -dc '0-9')
+else
+  . /etc/DISTRO_SPECS
 
-. /etc/DISTRO_SPECS
+  case "$DISTRO_TARGETARCH" in
+  # the installer is x86-specific
+  x86*) MYOPT=$(basename $0) ;;
+  *) MYOPT=2 ;;
+  esac
+fi
 
 which quickpet >/dev/null 2>&1 && HASQUICKPET="yes" || HASQUICKPET=""
 
@@ -148,6 +155,6 @@ fi
 
 . /usr/lib/gtkdialog/xml_info gtk #build bg_pixmap for gtk-theme
 #echo "$Puppy_Install" > /tmp/dotpup.xml #debug
-gtkdialog --center -p Puppy_Install
+gtkdialog --center -p Puppy_Install --styles=/tmp/gtkrc_xml_info.css
 
 ###END###

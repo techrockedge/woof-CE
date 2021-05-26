@@ -283,7 +283,7 @@ errmsg () {
 	fi
 	[ "$TITLEICON" ] || TITLEICON="icon-name=\"gtk-$MARK\""
 	export ERRMSG
-	export DIALOG="<window title=\"$TITLE\" $TITLEICON><vbox>
+	export DIALOG="<window title=\"$TITLE\" $TITLEICON resizable=\"false\"><vbox>
     <hbox>
     <pixmap  icon_size=\"5\"><input file stock=\"gtk-$MARK\"></input></pixmap>
     <text><input>echo -en \"\$ERRMSG\"</input></text>
@@ -359,38 +359,66 @@ reset_has_vars() {
 	HAS_PANGO=""
 	HAS_GCONV=""
 	HAS_GIO=""
+	HAS_UDEVDB=""
+	HAS_LDCONF=""
+	HAS_DCONF=""
+	
 }
+
 
 has_afterwork() {
 	[ "$SKIP_HAS_AFTERWORK" ] && return	#v2.0.9
 	reset_has_vars
-	if [ -d $MNTPNT/usr/lib${lsuffix} ] ; then
-		HAS_GDK=$(ls $MNTPNT/usr/lib${lsuffix}/gdk-pixbuf-*/*/* 2>/dev/null)
-		HAS_GTKIM=$(ls $MNTPNT/usr/lib${lsuffix}/gtk-*/*/* | grep "/immodules" 2>/dev/null)
-		HAS_PANGO=$(ls $MNTPNT/usr/lib${lsuffix}/pango/*/* 2>/dev/null)
-		HAS_GIO=$(find $MNTPNT/usr/lib${lsuffix} -maxdepth 2 -name "gio" 2>/dev/null)
-		if [ -d $MNTPNT/usr/lib${lsuffix}/gconv ] ; then
-			HAS_GCONV=$(ls $MNTPNT/usr/lib${lsuffix}/gconv 2>/dev/null)
-		fi
-		if [ "$DISTRO_ARCHDIR" = "x86_64-linux-gnu" ] ; then
-			if [ -d $MNTPNT/usr/lib/i386-linux-gnu/ ] ; then
-				HAS_32BIT=$(ls $MNTPNT/usr/lib/i386-linux-gnu/ 2>/dev/null)
+	
+	for usrfld in $MNTPNT/usr $MNTPNT/usr/local
+	do
+	
+		if [ -d $usrfld/lib${lsuffix} ] ; then
+		
+			HAS_GDK=$(ls $usrfld/lib${lsuffix}/gdk-pixbuf-*/*/* 2>/dev/null)
+			HAS_GTKIM=$(ls $usrfld/lib${lsuffix}/gtk-*/*/* | grep "/immodules" 2>/dev/null)
+			HAS_PANGO=$(ls $usrfld/lib${lsuffix}/pango/*/* 2>/dev/null)
+			HAS_GIO=$(find $usrfld/lib${lsuffix} -maxdepth 2 -name "gio" 2>/dev/null)
+			
+			if [ -d $usrfld/lib${lsuffix}/gconv ] ; then
+				HAS_GCONV=$(ls $usrfld/lib${lsuffix}/gconv 2>/dev/null)
+			fi
+			
+			if [ "$DISTRO_ARCHDIR" = "x86_64-linux-gnu" ] ; then
+				if [ -d $usrfld/lib/i386-linux-gnu/ ] ; then
+					HAS_32BIT=$(ls $usrfld/lib/i386-linux-gnu/ 2>/dev/null)
+				fi
 			fi
 		fi
-	fi
+	
+	done
+	
 	[ -d $MNTPNT/usr/share/mime ] && HAS_MIME=$(ls $MNTPNT/usr/share/mime 2>/dev/null)
-	[ -d $MNTPNT/lib/modules ] && HAS_MODULES=$(ls $MNTPNT/lib/modules 2>/dev/null)
+	[ "$HAS_MIME" == "" ] && HAS_MIME=$(ls $MNTPNT/usr/local/share/mime 2>/dev/null)
+	
+	[ -d $MNTPNT/usr/share/icons ] && HAS_ICONS=$(find -L $MNTPNT/usr/share/icons -type f 2>/dev/null)
+	[ "$HAS_ICONS" == "" ] && HAS_ICONS=$(find -L $MNTPNT/usr/local/share/icons -type f 2>/dev/null) 
+	
 	[ -d $MNTPNT/usr/share/fonts ] && HAS_FONTS=$(find -L $MNTPNT/usr/share/fonts -mindepth 1 -not -type d -printf '/%P\n' 2>/dev/null)
+	[ "$HAS_FONTS" == "" ] && HAS_FONTS=$(find -L $MNTPNT/usr/local/share/fonts -mindepth 1 -not -type d -printf '/%P\n' 2>/dev/null)
+	
+	if [ -d $MNTPNT/usr/share/glib-2.0/schemas/ ] ; then
+		HAS_GLIB_SCHEMA=$(ls $MNTPNT/usr/share/glib-2.0/schemas/ $MNTPNT/usr/local/share/glib-2.0/schemas/ 2>/dev/null)
+	fi
+	
 	if [ -d $MNTPNT/usr/share/applications ] ; then
 		HAS_DESKTOPS=$(ls $MNTPNT/usr/share/applications $MNTPNT/usr/local/share/applications 2>/dev/null)
 	fi
+	
+	[ -d $MNTPNT/etc/dconf/db/local.d ] && HAS_DCONF=$(ls $MNTPNT/etc/dconf/db/local.d 2>/dev/null)
+	[ -d $MNTPNT/lib/modules ] && HAS_MODULES=$(ls $MNTPNT/lib/modules 2>/dev/null)
 	[ -d $MNTPNT/etc/init.d ] && HAS_SCRIPTS=$(ls $MNTPNT/etc/init.d 2>/dev/null)
 	[ -d $MNTPNT/root/Startup ] && HAS_STARTUPS=$(ls $MNTPNT/root/Startup 2>/dev/null)
 	[ -d $MNTPNT/etc/profile.d ] && HAS_PROFILE=$(ls $MNTPNT/etc/profile.d 2>/dev/null)
-	[ -d $MNTPNT/usr/share/icons/hicolor ] && HAS_ICONS=$(find -L $MNTPNT/usr/share/icons/hicolor -type f)
-	if [ -d $MNTPNT/usr/share/glib-2.0/schemas/ ] ; then
-		HAS_GLIB_SCHEMA=$(ls $MNTPNT/usr/share/glib-2.0/schemas/ 2>/dev/null)
-	fi
+	[ -d $MNTPNT/etc/ld.so.conf.d ] && HAS_LDCONF=$(ls $MNTPNT/etc/ld.so.conf.d 2>/dev/null)
+	
+	HAS_UDEVDB=$(find $MNTPNT/ -type d -name "hwdb*" | grep "/udev/" 2>/dev/null)
+		
 	# save to files
 	[ "$HAS_MODULES" ] && echo $HAS_MODULES >> "$MYTMPDIR/has_modules"
 	[ "$HAS_FONTS" ] && echo $HAS_FONTS >> "$MYTMPDIR/has_fonts"
@@ -408,6 +436,10 @@ has_afterwork() {
 	[ "$HAS_GTKIM" ] && echo $HAS_GTKIM >> "$MYTMPDIR/has_gtkim"
 	[ "$HAS_PANGO" ] && echo $HAS_PANGO >> "$MYTMPDIR/has_pango"
 	[ "$HAS_GCONV" ] && echo $HAS_GCONV >> "$MYTMPDIR/has_gconv"
+	[ "$HAS_UDEVDB" ] && echo "$HAS_UDEVDB" >> "$MYTMPDIR/has_udevdb"
+	[ "$HAS_LDCONF" ] && echo "$HAS_LDCONF" >> "$MYTMPDIR/has_ldconf"
+	[ "$HAS_DCONF" ] && echo "$HAS_DCONF" >> "$MYTMPDIR/has_dconf"
+	
 }
 
 afterwork() {
@@ -427,6 +459,9 @@ afterwork() {
 	[ -e "$MYTMPDIR/has_gtkim" ] && HAS_GTKIM=$(cat "$MYTMPDIR/has_gtkim")
 	[ -e "$MYTMPDIR/has_pango" ] && HAS_PANGO=$(cat "$MYTMPDIR/has_pango")
 	[ -e "$MYTMPDIR/has_gconv" ] && HAS_GCONV=$(cat "$MYTMPDIR/has_gconv")
+	[ -e "$MYTMPDIR/has_udevdb" ] && HAS_UDEVDB=$(cat "$MYTMPDIR/has_udevdb")
+	[ -e "$MYTMPDIR/has_ldconf" ] && HAS_LDCONF=$(cat "$MYTMPDIR/has_ldconf")
+	[ -e "$MYTMPDIR/has_dconf" ] && HAS_DCONF=$(cat "$MYTMPDIR/has_dconf")
 
 	rm -f "$MYTMPDIR"/has_*	# clean up has_... files
 	if [ "$HAS_MODULES" ] ; then
@@ -438,23 +473,53 @@ afterwork() {
 		HASFONTDIRS=$(echo "$HAS_FONTS"| sed -e 's,/[^/]*$,,'| uniq)
 		if [ -e /usr/bin/mkfontscale ] ; then
 			for i in $HASFONTDIRS ; do
-				mkfontscale "/usr/share/fonts${i}"
-				mkfontdir "/usr/share/fonts${i}"
-				if [ "$(head -n 1 "/usr/share/fonts${i}/fonts.scale")" = "0" ]; then
-					rm -f /usr/share/fonts${i}/fonts.scale /usr/share/fonts${i}/fonts.dir
-				fi
+				
+				for usrfld in /usr /usr/local
+				do
+				 mkfontscale "$usrfld/share/fonts${i}"
+				 mkfontdir "$usrfld/share/fonts${i}"
+				 if [ "$(head -n 1 "$usrfld/share/fonts${i}/fonts.scale")" = "0" ]; then
+					rm -f $usrfld/share/fonts${i}/fonts.scale $usrfld/share/fonts${i}/fonts.dir
+				 fi
+				done
+		
 			done
 		fi
 		fc-cache -f
 	fi
 	
-	if [ "$HAS_DESKTOPS" ] && [ -e /usr/bin/update-desktop-database ] ; then
-		update-desktop-database /usr/share/applications
-		update-desktop-database /usr/local/share/applications
-	fi
 	
-	[ "$HAS_ICONS" ] && gtk-update-icon-cache -f /usr/share/icons/hicolor/
-	[ "$HAS_GLIB_SCHEMA" ] && /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas/ 
+	for usrfld in /usr /usr/local
+	do
+	
+	 if [ "$HAS_DESKTOPS" ] && [ -e /usr/bin/update-desktop-database ] ; then
+		update-desktop-database $usrfld/share/applications 2>/dev/null
+	 fi
+	
+ 	 if [ "$HAS_ICONS" ]; then
+	  for gtkcmd in gtk gtk4
+	  do
+	   if [ "$(which ${gtkcmd}-update-icon-cache)" != "" ]; then
+	    find "$usrfld/share/icons" -maxdepth 1 -name "*" -exec ${gtkcmd}-update-icon-cache -f -i '{}' \; 2>/dev/null
+ 	    break
+	   fi
+	  done
+	 fi
+	 
+	 if [ "$HAS_MIME" ]; then
+	  
+	  update-mime-database $usrfld/share/mime 2>/dev/null
+	 
+	  if [ -e "$usrfld/share/mime/packages" ] && [ "$(ls -1 "$usrfld/share/mime/packages")" == "" ]; then
+	   rm -rf $usrfld/share/mime/*
+	  fi
+	  
+	 fi
+     
+     [ "$HAS_GLIB_SCHEMA" ] && /usr/bin/glib-compile-schemas $usrfld/share/glib-2.0/schemas/ 2>/dev/null
+     [ "$HAS_GIO" ] && gio-querymodules $usrfld/lib/gio/modules 2>/dev/null
+     
+    done
 
 	if [ "$HAS_GDK" != "" ]; then
 		if [ -e /usr/bin/update-gdk-pixbuf-loaders ] ; then
@@ -464,29 +529,19 @@ afterwork() {
 		fi
 	fi
 
-	if [ "$HAS_MIME" ] ; then
-		update-mime-database /usr/share/mime
-	fi
-
 	if [ "$HAS_GTKIM" != "" ]; then
 		if [ -e /usr/bin/update-gtk-immodules ]; then
 			update-gtk-immodules
 		fi
-		if [ -e /usr/bin/update-gtk-immodules-1.0 ] ; then
-			update-gtk-immodules-1.0
-		elif [ -e /usr/bin/gtk-query-immodules-1.0 ] ; then
-			gtk-query-immodules-1.0 --update-cache
-		fi
-		if [ -e /usr/bin/update-gtk-immodules-2.0 ] ; then
-			update-gtk-immodules-2.0
-		elif [ -e /usr/bin/gtk-query-immodules-2.0 ] ; then
-			gtk-query-immodules-2.0 --update-cache
-		fi
-		if [ -e /usr/bin/update-gtk-immodules-3.0 ] ; then
-			update-gtk-immodules-3.0
-		elif [ -e /usr/bin/gtk-query-immodules-3.0 ] ; then
-			gtk-query-immodules-3.0 --update-cache
-		fi
+		
+		for gtkver in 1.0 2.0 3.0 4.0
+		do
+		 if [ -e /usr/bin/update-gtk-immodules-${gtkver} ] ; then
+		    update-gtk-immodules-${gtkver}
+		 elif [ -e /usr/bin/gtk-query-immodules-${gtkver} ] ; then
+		    gtk-query-immodules-${gtkver} --update-cache
+		 fi
+		done
 	fi
 
 	if [ "$HAS_PANGO" != "" ]; then
@@ -498,9 +553,23 @@ afterwork() {
 	fi
 
 	[ "$HAS_GCONV" ] && iconvconfig 2>/dev/null
-	[ "$HAS_GIO" ] && gio-querymodules /usr/lib/gio/modules
+	
+        if [ "$HAS_DCONF" ]; then
+	 dconf update 2>/dev/null
+	fi
+	
+	
+	if [ "$HAS_UDEVDB" ]; then
+	  #Check first if udev can update hwdb
+	  [ "$(udevadm --help 2>&1 | grep hwdb)" != "" ] && udevadm hwdb --update
+	fi
+	
+	if [ "$HAS_LDCONF" ]; then
+	 ldconfig
+	fi
 	
 	[ "$HAS_32BIT" ] && /sbin/ldconfig && gdk-pixbuf-query-loaders32 > /usr/lib/i386-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache
+	
 	if [ "$HAS_DESKTOPS" -a -z "$SKIP_FIXMENUS" ]; then
 		waitsplash $(gettext "Updating menu...")
 		#v2.0: refresh default applications
@@ -555,7 +624,7 @@ keyword() { # 13 Nov 2011
 make_combo() {
 	NODUP=""
 	[ "$1" = '-' ] && NODUP="y" && shift
-	LIST="$@"
+	LIST="$(echo "$@" | sed -e "s#\ (#_(#g")"
 	if [ -z "$NODUPE" ]; then
 		echo "$LIST"| sed -e 's!\([^ ][^ ]*\)!<item>\1</item>!g' |tr '@' ' ' 
 		return
@@ -564,7 +633,7 @@ make_combo() {
 	for ONEITEM in $LIST;do
 		echo "$CHOICE" | grep -q ">$(keyword $ONEITEM)[ |]" && continue
 		CHOICE="$CHOICE
-		<item>$(echo $ONEITEM|tr '@' ' ')</item>"
+		<item>$(echo $ONEITEM | sed -e "s#_(#\ (#g" |tr '@' ' ')</item>"
 	done
 	echo "$CHOICE"
 }
@@ -576,7 +645,7 @@ add_new_sfs_list() {
 	[ "$Q" ] && Q="@($QUEUED)"
 	case "$F" in
 		$SFSBASE|$ZDRBASE|$ADRBASE|$YDRBASE|$FDRBASE) return 1 ;;
-		*.sfs|*.sb|*.lzm|*.xzm|*.squashfs) ok=1 ;;
+		*.sfs|*.sb|*.lzm|*.xzm|*.squashfs|*.filesystem) ok=1 ;;
 		*) return 1 ;; #only allow sfs files
 	esac
 	echo "$LOADEDLIST" | grep -qw "$F" && return 1  # already listed
@@ -603,7 +672,7 @@ loaded_sfs_list() {
 	USEDLIST=$(losetup -a)
 	LOOPDEVS=$(echo "$USEDLIST"| cut -d':' -f1)
 	if [ "$LOOPDEVS" ]; then
-		PUP_ROS=$(LANG=C df | grep ' /initrd/pup_ro')
+		PUP_ROS=$(LANG=C df -a | grep ' /initrd/pup_ro')
 		for LOOPDEV in $LOOPDEVS; do
 			if echo "$PUP_ROS" | grep -qw "^$LOOPDEV"; then
 				F=$(echo "$USEDLIST"| grep -w "$LOOPDEV"| tr -s ' ' | cut -d' ' -f3 | sed -e 's/^(//' -e 's/)$//')
@@ -691,8 +760,8 @@ main_dialog() {
 	[ "$BASELIST" = "" ] && loadable_sfs_list # 1feb11 # 21feb11
 	#BASELIST=$(loadable_sfs_list)
 	if [ "$BASELIST" != "" ]; then
-		LOADCOMBO='<combobox tooltip-text="'$(gettext "Choose from the pulldown or drag a sfs file here. Or, you can copy and paste a weblink here.")'">
-	 <variable>FILE1</variable><item>""</item>'$(make_combo $BASELIST)'<visible>'$LOADVISIBLE'</visible></combobox>'
+		LOADCOMBO='<comboboxtext tooltip-text="'$(gettext "Choose from the pulldown or drag a sfs file here. Or, you can copy and paste a weblink here.")'">
+	 <variable>FILE1</variable><item>""</item>'$(make_combo $BASELIST)'<visible>'$LOADVISIBLE'</visible></comboboxtext>'
 	else
 		LOADCOMBO='<hbox><entry tooltip-text="'$(gettext "Type the path or drag a sfs file here. Or, you can copy and paste a weblink here.")'">
      <variable>FILE1</variable><visible>'$LOADVISIBLE'</visible></entry>
@@ -707,16 +776,16 @@ main_dialog() {
 	UNLOADCOMBO=""
 	if [ "$ALREADY_SFS_LIST" != "" ]; then
 		UNLOADABLE="enabled"
-		UNLOADCOMBO='<table tooltip-text="'$(gettext "Select the sfs file you want to unload.")'">
+		UNLOADCOMBO='<tree tooltip-text="'$(gettext "Select the sfs file you want to unload.")'">
   <label>'$(gettext 'Total of mounted SFS =')' '$cntsfsloaded'</label>
-  <variable>UNLOADSFS</variable>'$(make_combo $ALREADY_SFS_LIST)'<visible>'$UNLOADVISIBLE'</visible></table>'
+  <variable>UNLOADSFS</variable>'$(make_combo $ALREADY_SFS_LIST)'<visible>'$UNLOADVISIBLE'</visible></tree>'
 		[ "$QUEUELIST" ] && UNLOADCOMBO="$UNLOADCOMBO
   "'<text><input>echo -en "'$(gettext "Some are not loaded but in the queue.")'"</input></text>'
 	else
 		UNLOADABLE="disabled"
 		UNLOADCOMBO='<text><label>('$(gettext "Nothing loaded.")')</label></text>'
 	fi
-	DIALOG='<window title="'$LONG_TITLE'"><vbox>
+	DIALOG='<window title="'$LONG_TITLE'" resizable="false"><vbox>
     <hbox>
     <pixmap><input file>'$MYICON'</input></pixmap>
 	<text width-chars="'$TEXTWIDTHCHARS'" width-request="'$TEXTWIDTH'"><input>echo -en "'$(gettext "You can load or unload extra SFS files on-the-fly.")'"</input></text>
@@ -819,14 +888,14 @@ NOCOPY"
 	fi
 	[ "$TOPPART" ] && TOPPART=$(echo "$PCPARTS" | grep -w "$TOPPART")  # precaution
 	[ "$TOPPART" ] && TOPPART=$TOPPART" ($(gettext "Recommended"))"
-	DIALOG='<window title="'$MYNAME'"><vbox>
+	DIALOG='<window title="'$MYNAME'" resizable="false"><vbox>
     <hbox>
     <pixmap  icon_size="5"><input file stock="gtk-dialog-question"></input></pixmap>
     <text><input>echo -e -n "'$MSG'"</input></text>
     </hbox>
   <frame '$(gettext "Where to save?")'>
   <text><input>echo -en "'"$MSG1\n\n$MSG2"'"</input></text>
-  <combobox><variable>PARTSPEC</variable>'$(make_combo - $TOPPART $PCPARTS)'</combobox>
+  <comboboxtext><variable>PARTSPEC</variable>'$(make_combo - $TOPPART $PCPARTS)'</comboboxtext>
   </frame>
   <hbox><button ok></button><button cancel></button></hbox>
   </vbox></window>'
@@ -938,7 +1007,7 @@ P$ID|$CMD|$LABEL"
 		fi
 		#debug "ICON=$ICON"
 		CHOICES='<text width-request="240"><label>"'$(echo $APPLIST| cut -d'|' -f3| tr '@' ' ')'"</label></text>'
-		[ -s "$ICON" ] && CHOICES='<hbox><pixmap><input file>'$ICON'</input></pixmap>
+		[ -s "$ICON" ] && CHOICES='<hbox><pixmap><width>48</width><height>48</height><input file>'$ICON'</input></pixmap>
 		'$CHOICES'</hbox>'
 		P1="true"
 	else
@@ -958,13 +1027,17 @@ P$ID|$CMD|$LABEL"
 	EXTRABUTTON=""
 	[ "$REENT" ] && EXTRABUTTON=$CONTINUE_BUTTON
 	TITLEICON='icon-name="gtk-dialog-question"'
-	export DIALOG='<window title="'$TITLE'" '$TITLEICON'><vbox>
+	export DIALOG='<window title="'$TITLE'" '$TITLEICON' resizable="false"><vbox>
    '$MSGBOX'
    <hbox>
-   <pixmap  icon_size="5"><input file stock="gtk-dialog-question"></input></pixmap>
+   <pixmap icon_size="5"><input file stock="gtk-dialog-question"></input></pixmap>
    <text><label>"'$(gettext "Do you want to run the application right now?")'"</label></text>
   </hbox>
-  <frame>'$CHOICES'</frame>
+  <frame>
+  <vbox scrollable="true" space-expand="true">
+  '$CHOICES'
+  </vbox>
+  </frame>
   <hbox>
   <button><input file stock="gtk-execute"></input><label>'$(gettext "Run")'</label><action>EXIT:Execute</action></button> 
   '$EXTRABUTTON'
@@ -1157,7 +1230,7 @@ append_sfs() {
  
 	# where to mount
 	NEW=''
-	MOUNTED_PUP_RO=$(busybox df | grep -o '/initrd/pup_ro.*')
+	MOUNTED_PUP_RO=$(df -a | grep -o '/initrd/pup_ro.*')
 	# pup_ro1 and pup_ro2 are reserved
 	for i in $(seq 3 99) # find free pup_roX
 	do
@@ -1211,6 +1284,22 @@ append_sfs() {
 			free_loopdev "$LOOPDEV"
 		fi
 	fi
+	
+	if [ $STATUS -eq 0 ]; then
+	
+		if [ -e $MNTPNT/etc/DISTRO_SPECS ] && [ -e $MNTPNT/etc/rc.d/rc.sysinit ] && [ -e $MNTPNT/etc/hostname ]; then
+			debug "WARNING: Attempting to load Puppy SFS"
+			/usr/lib/gtkdialog/box_yesno "$TITLE" "Puppy SFS detected. This may cause trouble if loaded." "Continue to load?"
+			if [ $? -ne 0 ]; then
+				busybox unmount "$MNTPNT"
+				free_loopdev "$LOOPDEV"
+				[ "$XPID" != "" ] && kill $XPID
+				exit
+			fi
+		fi
+		
+	fi
+	
 	if [ $STATUS -eq 0 ]; then
 		echo "$LOOPDEV: 0 $EXTRASFS" >> "$LOOPLIST"
 	else
@@ -1231,6 +1320,7 @@ append_sfs() {
 		fatal "$(printf "$(gettext "Failed to append '%s' to unionfs.")" "$MNTPNT")\n$MOVEDLOG"
 	fi
 	sync
+	busybox mount -t aufs -o remount,udba=reval unionfs /
 	# add to BOOTCONFIG
 	#v1.9.1, #v2.0: do not register zdrv #v2.0.11: ditto adrv and ydrv
 	#v2.1.8: avoid dup. in EXTRASFSLIST
@@ -1272,11 +1362,11 @@ is_on_cd() { # is_on_cd without parameter
 	[ "$CDDEVS" ] || return
 	for D in $CDDEVS; do
 		debug "CD drive:$D"
-		MNTPNT=$(df | grep -w "^/dev/$D" | cut -d'%' -f2 | tr -d ' ')
+		MNTPNT=$(df -a | grep -w "^/dev/$D" | cut -d'%' -f2 | tr -d ' ')
 		if [ "$MNTPNT" = "" ]; then
 			cddetect_quick -d/dev/$D || continue # abort if the madia not inserted
 			MNTPNT="/mnt/$D"
-			if df | grep -qw "$MNTPNT"; then # seems different device is already mounted
+			if df -a | grep -qw "$MNTPNT"; then # seems different device is already mounted
 				umount "$MNTPNT" || continue
 			fi
 			mkdir -p "$MNTPNT"
@@ -1301,7 +1391,7 @@ ram_free() { # how much free RAM?
 	RAMSIZE=$(echo $ALINE | tr -s ' ' | cut -f2 -d' ')
 	#debug "RAMSIZE=$RAMSIZE"
 	[ $RAMSIZE ] || RAMSIZE=0
-	TMPFUSED=$(LANG=C df -k | grep -E '^(tmpfs|shms)'| tr -s ' ' | cut -d' ' -f3)
+	TMPFUSED=$(LANG=C df -a -k | grep -E '^(tmpfs|shms)'| tr -s ' ' | cut -d' ' -f3)
 	RFREE=$RAMSIZE
 	if [ "$TMPFUSED" ]; then
 		for S in $TMPFUSED; do
@@ -1397,7 +1487,7 @@ unload() {
 	[ ! -s "$EXTRASFS" ] && F=$(is_at_home "$FILENAME") && EXTRASFS="$F"
 	debug "$LOOPDEV;$EXTRASFS;"
 	MNTPNT=""
-	[ "$LOOPDEV" != "" ] && MNTPNT=$(LANG=C df | grep -w "^$LOOPDEV"| tail -n 1 | cut -d'%' -f2| tr -d ' ')
+	[ "$LOOPDEV" != "" ] && MNTPNT=$(LANG=C df -a | grep -w "^$LOOPDEV"| tail -n 1 | cut -d'%' -f2| tr -d ' ')
 	debug "mount point is $MNTPNT;"
 	if [ -d "$MNTPNT" ]; then
 		has_afterwork
@@ -1417,6 +1507,7 @@ unload() {
 		busybox mount -t aufs -o remount,del:$MNTPNT unionfs /
 		STATUS=$?
 		if [ $STATUS -eq 0 ]; then
+		        busybox mount -t aufs -o remount,udba=reval unionfs /
 			busybox umount "$LOOPDEV"	#v1.9.1
 			if [ $? -ne 0 ]; then
 				log "Failed to unmount $LOOPDEV."
@@ -1824,6 +1915,7 @@ if [ "$STARTSCRIPT" ]; then
 			echo "y" > "$MYTMPDIR/has_gtkim"
 			echo "y" > "$MYTMPDIR/has_pango"
 			echo "y" > "$MYTMPDIR/has_gconv"
+			echo "y" > "$MYTMPDIR/has_udevdb"
 						
 			echo "/usr/sharefonts" > "$MYTMPDIR/has_fonts"	###FIXME subdirs ###
 		fi
@@ -2266,7 +2358,7 @@ fi ### SFSMODE != "" ### end
 MNTPNT=""
 LOOPDEV=$(losetup -a | grep -w "$EXTRASFS" | cut -sd ':' -f1)
 if [ "$LOOPDEV" != "" ]; then
-	MNTPNT=$(df | grep -w "$LOOPDEV" | cut -sd'%' -f2)
+	MNTPNT=$(df -a | grep -w "$LOOPDEV" | cut -sd'%' -f2)
 	MNTPNT=$(echo $MNTPNT) # remove blank
 fi
 

@@ -265,7 +265,8 @@ else
 		#are we inside an expanded pmu / playlist in general
 		if [ "`grep -iE -m1 "\.pmu\||pmusic_expand_end" <<< "$TMP" | grep -F 'pmusicbrowse_collapse'`" ]; then S=$S"
 			$(template " $(gettext '(Re)set source of track')" reset_source icon_refresh.svg single-selection)
-			$(template " $(gettext 'Search for track')" search_track icon_pmusic_find.svg single-selection)"
+			$(template " $(gettext 'Add youtube-search to playqueue')" search_youtube icon_audio_youtube.svg single-selection)
+			$(template " $(gettext 'Search locally for track')" search_track icon_pmusic_find.svg single-selection)"
 			SEPARATOR=true
 		fi
 		;;
@@ -459,10 +460,18 @@ reset_source) #only inside pmu files
 	fi
 	;;
 
+search_youtube)
+	IFS='|' read COMMAND ARTIST TITLE TMP <<< "$(grep -Fm1 "$(<$WORKDIR/SOURCE_PRESS_EVENT)|" $WORKDIR/sourcelist)"
+	ARTIST=${ARTIST%.*} #in case no metainfo stored in DB, filename with extension is shown in sourcelist
+	. $APPDIR/func_add -add_youtube "${ARTIST#*\ \ \ \ } $TITLE"
+	;;	
+	
 search_track)
 	IFS='|' read COMMAND ARTIST TITLE TMP <<< "$(grep -Fm1 "$(<$WORKDIR/SOURCE_PRESS_EVENT)|" $WORKDIR/sourcelist)"
-	$APPDIR/func -search_sources "${ARTIST#*\ \ \ \ } $TITLE"
-	echo "${ARTIST#*\ \ \ \ } $TITLE" > $WORKDIR/filebrowser_dir
+	ARTIST="${ARTIST#*\ \ \ \ }"; ARTIST=${ARTIST%.*} #in case no metainfo stored in DB, filename with extension is shown in sourcelist
+	TMP="$(echo "$ARTIST  $TITLE" | sed 's/ - / /')"
+	$APPDIR/func -search_sources "$TMP"
+	echo "$TMP"> $WORKDIR/filebrowser_dir
 	;;
 
 add_favorites)

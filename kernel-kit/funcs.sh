@@ -2,7 +2,7 @@
 
 function git_aufs_util_branch() {
 	# aufs-util branch - must keep this updated - git://git.code.sf.net/p/aufs/aufs-util.git
-	for i in 5.0 4.19 4.14 4.9 4.4 4.1 4.0 3.18 3.14 3.9 3.2
+	for i in 5.8 5.0 4.19 4.14 4.9 4.4 4.1 4.0 3.18 3.14 3.9 3.2
 	do
 		if vercmp ${kernel_version} ge ${i} ; then
 			aufs_util_branch=${i}
@@ -77,7 +77,17 @@ function git_aufs_branch() {
 		vercmp ${kernel_version} ge 5.2.5 && aufsv='5.2.5+'
 		;;
 	5.3)  aufsv=5.3 ;;
-	5.4)  aufsv=5.4 ;;
+	5.4)  aufsv=5.4 
+		vercmp ${kernel_version} ge 5.4.3 && aufsv='5.4.3'
+		;;
+	5.5)  aufsv=5.5 ;;
+	5.6)  aufsv=5.6 ;;
+	5.7)  aufsv=5.7 ;;
+	5.8)  aufsv=5.8 ;;
+	5.9)  aufsv=5.9 ;;
+	5.10)  aufsv=5.10 ;;
+	5.11)  aufsv=5.11 ;;
+	5.12)  aufsv=5.12 ;;
 esac
 }
 #======================================================================
@@ -94,6 +104,30 @@ function log_ver() {
 	mksquashfs -version | head -1
 	echo
 	) | tee -a ${BUILD_LOG}
+}
+
+function get_latest_kernels() {
+	TMP=/tmp/kernels.txt
+	rm -f $TMP
+	x=0
+	s=
+	curl -s https://www.kernel.org | while read a ; do
+		if [ $x = 1 ]; then
+			echo $a | grep -q 'EOL' && x=0 && continue
+			e=${a#*\>}
+			e=${e#*\>}
+			e=${e%%\<*}
+			echo "$e ($s)" >> $TMP
+			x=0
+		fi
+		if echo "$a" | grep -qE 'longterm:|stable:' ;then
+			x=$(($x + 1))
+			echo "$a" | grep -q 'stable:' && s=stable || s=longterm
+		else
+			continue
+		fi
+	done	
+	cat $TMP
 }
 
 #======================================================================
@@ -253,7 +287,7 @@ function get_stable_kernel() {
 	[ "$USE_STABLE_KERNEL" == '' ] && exit_error "Error: USE_STABLE_KERNEL must be specified before calling get_stable_kernel()"
 	log_msg "building stable"
 	GITHUB=$USE_STABLE_KERNEL
-	STABLE_URL=`curl ${GITHUB}/raspberrypi/linux/releases | grep 'tar\.gz' | head -n1 | grep -o 'raspberrypi\/.*gz'`
+	STABLE_URL=`curl ${GITHUB}/raspberrypi/linux/releases | grep 'tar\.gz' | head -n3 | grep -o 'raspberrypi\/.*gz' | grep -v 'arm64' | head -n1`
 	STABLE_KERNEL_PKG=${STABLE_URL##*/}
 	STABLE_KERNEL_DIR=linux-${STABLE_KERNEL_PKG/\.tar.*/}
 	mkdir -p sources/kernels

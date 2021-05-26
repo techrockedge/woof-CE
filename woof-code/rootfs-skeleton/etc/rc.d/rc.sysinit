@@ -58,6 +58,14 @@ status_func() {
  return $1 #return with same status as entry param.
 }
 
+create_zram_swap() {
+  modprobe zram >/dev/null 2>&1
+  RAM=`awk '/MemTotal/{print $2}' /proc/meminfo`
+  echo ${RAM}000 > /sys/block/zram0/disksize || return 1
+  mkswap /dev/zram0 || return 1
+  swapon /dev/zram0
+}
+
 loadswap_func() { #w481 made into a function.
  echo "LOAD SWAP"
  #load a swap partition...
@@ -88,7 +96,16 @@ loadswap_func() { #w481 made into a function.
   if [ $ret -eq 0 ] ; then
     [ "$SWAPSIZEBYTES" ] && EXTRAALLOCK=$(($EXTRAALLOCK + $SWAPSIZEBYTES))
     SWAPON="yes"
+    return
   fi
+ fi
+ # if we failed to find a swap partition or file, try zram
+ echo -n "Loading zram swap ..." >/dev/console
+ create_zram_swap
+ ret=$?
+ status_func $ret
+ if [ $ret -eq 0 ] ; then
+   SWAPON="yes"
  fi
 }
 
@@ -150,6 +167,8 @@ if [ $PUPMODE -eq 2 ] ; then
  fi
 fi
 #===============
+
+rm -f /tmp/snd-kmod.lst 2>/dev/null
 
 if [ "$BOOT_DIRTYWRITE" ];then #120704 see /etc/rc.d/BOOTCONSTRAINED, variable set in 3builddistro.
  #i have set this as 1500 which is 15 seconds (default is 5 seconds).
@@ -228,6 +247,9 @@ done
 EXTRAALLOCK=0
 [ "$SWAPON" != "yes" ] && loadswap_func
 if [ "$SWAPON" = "yes" ];then
+  # we prefer not to use swap unless we have to; this should improve responsiveness if we don't have much RAM
+ echo 5 > /proc/sys/vm/swappiness
+
  # resize tmpfs
  # this code is meant to increase the size of the tmpfs
  # taking into account swap space and sfs_ram_sizek[might be removed]
@@ -474,6 +496,8 @@ USBBUILTIN='no'
 if [ "`modinfo ehci_hcd 2>/dev/null`" = "" ];then #110712 shut this up.
  #kernel has usb core drivers (and usb-storage) builtin.
  USBBUILTIN='yes'
+elif modinfo ehci_hcd | grep -q '(builtin)' ;then #kmod new version
+ USBBUILTIN='yes' 
 else
  PCIUSB="`lspci -n | grep -o -E ' 0c03: '`" #160609
  if [ "$PCIUSB" != "" ];then #this may be slow to respond.
@@ -611,12 +635,32 @@ if [ -z "$ISITAMAC" ];then #don't run this block on mac
  fi
 fi
 
+# dbus
+if which dbus-uuidgen >/dev/null 2>&1 ; then
+	mkdir -p /var/lib/dbus /var/run/dbus
+	rm -f /var/lib/dbus/machine-id /etc/machine-id
+	chown messagebus /var/run/dbus
+	chgrp messagebus /var/run/dbus
+	dbus-uuidgen > /var/lib/dbus/machine-id
+	ln -snf /var/lib/dbus/machine-id /etc/machine-id
+	ln -snf /var/run/dbus /run/dbus
+fi
+
+#start dbus-daemon
+if which dbus-daemon >/dev/null 2>&1 ; then
+ if [ "$(pidof dbus-daemon)" == "" ]; then
+  dbus-daemon --system
+ fi
+fi
+
 #----------------------
-sleep 5 # in some cases network modules take some time to load
-#100814 100903 record cumulative tx/rx, see also network_tray and rc.shutdown.
-#181209 tx/rx logic now included in network_default_connect...
-# Connect "current" or default network through eth0, frisbee, sns, network wizard, pgprs-connect, etc.
-network_default_connect --sysinit #181209
+(
+ sleep 5 # in some cases network modules take some time to load
+ #100814 100903 record cumulative tx/rx, see also network_tray and rc.shutdown.
+ #181209 tx/rx logic now included in network_default_connect...
+ # Connect "current" or default network through eth0, frisbee, sns, network wizard, pgprs-connect, etc.
+ network_default_connect --sysinit #181209
+) &
 #----------------------
 
 echo -n ", printing, etc.)..." >/dev/console
@@ -630,17 +674,6 @@ if [ -e /initrd/tmp/wireless.conf ] ; then
 			echo -e "y\ny" | bbwireless.sh -s >/dev/null 2>&1 # should start network and make bbwireless default network tool
 		fi
 	fi
-fi
-
-# dbus
-if which dbus-uuidgen >/dev/null 2>&1 ; then
-	mkdir -p /var/lib/dbus /var/run/dbus
-	rm -f /var/lib/dbus/machine-id /etc/machine-id
-	chown messagebus /var/run/dbus
-	chgrp messagebus /var/run/dbus
-	dbus-uuidgen > /var/lib/dbus/machine-id
-	ln -snf /var/lib/dbus/machine-id /etc/machine-id
-	ln -snf /var/run/dbus /run/dbus
 fi
 
 #----------------------

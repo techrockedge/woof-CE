@@ -30,7 +30,7 @@ download_kernel() {
 	local URL="$1"
 	../support/download_file.sh "$URL" "../../local-repositories/${DISTRO_TARGETARCH}/kernels"
 	if [ $? -ne 0 ] ; then
-		../support/download_file.sh "URL" "../../local-repositories/${DISTRO_TARGETARCH}/kernels"
+		../support/download_file.sh "$URL" "../../local-repositories/${DISTRO_TARGETARCH}/kernels"
 		[ $? -ne 0 ] && exit 1
 	fi
 }
@@ -229,17 +229,12 @@ mkdir -p build
 
 if [ -d '../kernel-kit/output' ];then
 	# only look for kernels that match DISTRO_FILE_PREFIX
-	KIT_KERNELS=`find ../kernel-kit/output -maxdepth 1 -type f -name "kit-kernel*${DISTRO_FILE_PREFIX}.tar*" |grep -v 'txt$'`
+	KIT_KERNELS=`find ../kernel-kit/output -maxdepth 1 -type f -name "kit-kernel*.tar*" |grep -v 'txt$'`
 	for ONE_KERNEL in $KIT_KERNELS
 	do
 		ONE_KERNEL_NAME=${ONE_KERNEL##*/}
-		if [ ! -e "../../local-repositories/${DISTRO_TARGETARCH}/kernels/${ONE_KERNEL_NAME}" ]; then
-			cp ${ONE_KERNEL} ../../local-repositories/${DISTRO_TARGETARCH}/kernels/
-		fi
-		if [ ! -e "../../local-repositories/${DISTRO_TARGETARCH}/kernels/${ONE_KERNEL_NAME}.sha256.txt" ]; then
-			cp ${ONE_KERNEL}.sha256.txt ../../local-repositories/${DISTRO_TARGETARCH}/kernels/
-		fi
-
+		cp ${ONE_KERNEL} ../../local-repositories/${DISTRO_TARGETARCH}/kernels/
+		cp ${ONE_KERNEL}.sha256.txt ../../local-repositories/${DISTRO_TARGETARCH}/kernels/
 	done
 fi
 
@@ -319,6 +314,7 @@ if [ "$CHOSEN_KERNEL" != "" ]; then
 
 	if [ "${DISTRO_TARGETARCH}" = "arm" ]; then
 		[ -f vmlinuz-*-v7+* ] && mv -f vmlinuz-*-v7* vmlinuz7
+		[ -f vmlinuz-*-v7-* ] && mv -f vmlinuz-*-v7* vmlinuz7
 		[ -f vmlinuz-* ] && mv -f vmlinuz-* vmlinuz
 	else
 		[ -f vmlinuz-* ] && mv -f vmlinuz-* vmlinuz
@@ -333,6 +329,7 @@ if [ "${DISTRO_TARGETARCH}" = "arm" -a "$CHOSEN_KERNEL7" != "" ]; then
 	[ "$?" = 0 ] || exit 1
 
 	[ -f vmlinuz-*-v7+* ] && mv -f vmlinuz-*-v7+* vmlinuz7
+	[ -f vmlinuz-*-v7-* ] && mv -f vmlinuz-*-v7-* vmlinuz7
 	[ -f vmlinuz-* ] && mv -f vmlinuz-* vmlinuz
 fi
 
@@ -343,11 +340,16 @@ if [ "${DISTRO_TARGETARCH}" = "arm" -a "$CHOSEN_KERNEL7L" != "" ]; then
 	tar -xvf "../../../local-repositories/${DISTRO_TARGETARCH}/kernels/${CHOSEN_KERNEL7L}"
 	[ "$?" = 0 ] || exit 1
 
-	[ -f vmlinuz-*-v7l+* ] && mv -f vmlinuz-*-v7l+* vmlinuz7l
+	[ -f vmlinuz-*-v7l* ] && mv -f vmlinuz-*-v7l* vmlinuz7l
 	[ -f vmlinuz-* ] && mv -f vmlinuz-* vmlinuz
 fi
 
 cd ..
+
+for SFS in build/fdrv-*.sfs build/kernel-modules-*.sfs; do
+	echo "Extracting $SFS to rootfs-complete"
+	unsquashfs -f -d rootfs-complete $SFS || exit 1
+done
 
 exit 0
 
