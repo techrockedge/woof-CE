@@ -1,86 +1,50 @@
 #!/bin/bash
+#
+# sandbox3 or $PX $BUILD
+#
 # efi.img/grub2 is thanks to jamesbond
 # basic CD structure is the same as Fatdog64
-# called from 3builddistro-Z (or build-iso.sh)
+# called from 3builddistro (or build-iso.sh)
 
-#set -x
+# this file contains the cd 'skeleton'
+CDBOOT='http://distro.ibiblio.org/puppylinux/initrd_progs/cdboot-20191126.tar.xz'
+CDBOOT_TAR=${CDBOOT##*/}           #basename
+dlfile_sh=${0%/*}/download_file.sh #dirname + /download_file.sh
 
 if [ -f ../_00build.conf ] ; then
 	. ../_00build.conf
+	if [ -f ../_00build_2.conf ] ; then
+		. ../_00build_2.conf
+	fi
 	. ../DISTRO_SPECS
+	${dlfile_sh} ${CDBOOT} ../../local-repositories/ .
 elif [ -f ./build.conf ] ; then #zwoof-next
 	. ./build.conf
 	. ./DISTRO_SPECS
+	${dlfile_sh} ${CDBOOT} ../../../local-repositories/ .
 fi
 
-[ -z "$PX" ]    && PX=../sandbox3/rootfs-complete
-[ -z "$BUILD" ] && BUILD=../sandbox3/build
+[ -z "$PX" ]    && PX=rootfs-complete
+[ -z "$BUILD" ] && BUILD=build
 
-FIXUSB=${PX}/usr/sbin/fix-usb.sh
-BOOTLABEL=puppy
-PPMLABEL=`which ppmlabel`
-TEXT="-text $DISTRO_VERSION"
-EFI64_SOURCE=${PX}/usr/share/grub2-efi/grubx64.efi #grub2_efi noarch pkg
-EFI32_SOURCE=${PX}/usr/share/grub2-efi/grubia32.efi
+tar -C ${BUILD} -xaf ${CDBOOT_TAR} || exit 1
 
-if [ -f "$EFI32_SOURCE" -o -f "$EFI64_SOURCE" ] ; then
-	SCREENRES='800 600'
+rm -f ${BUILD}/boot/*.sh # scripts
+
+if [ "$(ls ${PX}/usr/share/grub2-efi/grub*.efi* 2>/dev/null)" ] ; then
 	UEFI_ISO=yes
-	UFLG=-uefi
 else
-	SCREENRES='640 480'
 	UEFI_ISO=
+	rm -f ${BUILD}/boot/efi.img
+fi
+
+if [ "$LICK_IN_ISO" != "yes" ]; then #build.conf
+	rm -rf ${BUILD}/Windows_Installer
 fi
 
 #===================================================
 
-# make an UEFI iso
-mk_iso() {
-	tmp_isoroot=$1 	# input
-	OUTPUT=$2 		# output
-	if [ "$UEFI_ISO" ] ; then
-		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table \
-			-eltorito-alt-boot -eltorito-platform efi -b efi.img -no-emul-boot "$tmp_isoroot" || exit 100
-		echo "Converting ISO to isohybrid."
-		isohybrid -u $OUTPUT
-	else
-		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table "$tmp_isoroot" || exit 101
-		echo "Converting ISO to isohybrid."
-		isohybrid $OUTPUT
-	fi
-}
-
-# make a grub2 efi image
-mk_efi_img() {
-	TGT=$1
-	mkdir -p /tmp/efi_img # mount point
-	echo "making ${TGT}/efi.img"
-	size=8192 #4mb
-	if [ -f "$EFI32_SOURCE" ] ; then
-		size=$((size+4096)) #6 mb
-	fi
-	dd if=/dev/zero of=${TGT}/efi.img bs=512 count=${size} || return 1
-	echo "formatting ${TGT}/efi.img - vfat"
-	mkdosfs ${TGT}/efi.img
-	FREE_DEV=`losetup -f`
-	echo "mounting ${TGT}/efi.img on /tmp/efi_img"
-	losetup $FREE_DEV ${TGT}/efi.img || return 2
-	mount -t vfat $FREE_DEV /tmp/efi_img || \
-		(losetup -d $FREE_DEV;return 3)
-	sync
-	echo "copying files"
-	mkdir -p /tmp/efi_img/EFI/boot/ || return 4
-	cp "$EFI64_SOURCE" /tmp/efi_img/EFI/boot/bootx64.efi 2>/dev/null
-	cp "$EFI32_SOURCE" /tmp/efi_img/EFI/boot/bootia32.efi 2>/dev/null 
-	sync
-	echo "unmounting /tmp/efi_img"
-	umount /tmp/efi_img || return 7
-	losetup -d $FREE_DEV 2>/dev/null #precaution
-	rm -r /tmp/efi_img
-	return 0
-}
-
-ISO_BASENAME=${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}${UFLG}${XTRA_FLG}
+ISO_BASENAME=${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}${XTRA_FLG}
 WOOF_OUTPUT=../woof-output-${ISO_BASENAME}
 if [ -L ../woof-code ] ; then #zwoof-next
 	WOOF_OUTPUT=${WOOF_OUTPUT#../} #use current dir
@@ -88,84 +52,99 @@ fi
 [ -d $WOOF_OUTPUT ] || mkdir -p $WOOF_OUTPUT
 OUT=${WOOF_OUTPUT}/${ISO_BASENAME}.iso
 
+#===================================================
 
-#======================================================
-#                  isolinux
-#======================================================
+case $(uname -m) in
+	i686)   ISOHYBRID=${BUILD}/boot/isolinux/isohybrid   ;;
+	x86_64) ISOHYBRID=${BUILD}/boot/isolinux/isohybrid64 ;;
+esac
 
-ISOLINUX=
-VESAMENU=
+case $DISTRO_TARGETARCH in
+	x86)    ISOHYBRID_TARGET=${BUILD}/boot/isolinux/isohybrid   ;;
+	x86_64) ISOHYBRID_TARGET=${BUILD}/boot/isolinux/isohybrid64 ;;
+	*) ISOHYBRID_TARGET=$(which isohybrid 2>/dev/null) ;;
+esac
 
-if [ -f ${PX}/usr/lib/ISOLINUX/isolinux.bin ] ; then
-	#isolinux pkg (debian/ubuntu) xenial+
-	ISOLINUX=${PX}/usr/lib/ISOLINUX/isolinux.bin
-elif [ -f ${PX}/usr/share/syslinux/isolinux.bin ] ; then
-	# standard location
-	ISOLINUX=${PX}/usr/share/syslinux/isolinux.bin
-fi
-
-if [ -f ${PX}/usr/lib/syslinux/modules/bios/vesamenu.c32 ] ; then
-	# syslinux 6
-	VESAMENU=${PX}/usr/lib/syslinux/modules/bios
-elif [ ${PX}/usr/share/syslinux/vesamenu.c32 ] ; then
-	VESAMENU=${PX}/usr/share/syslinux
-fi
-
-[ -z "$ISOLINUX" ] && echo "Can't find isolinux" && exit 32
-[ -z "$VESAMENU" ] && echo "Can't find vesamenu" && exit 33
-
-cp -a $ISOLINUX		$BUILD
-for i in ldlinux.c32 libcom32.c32 libutil.c32 vesamenu.c32 ; do
-	if [ -f $VESAMENU/${i} ] ; then
-		cp -a $VESAMENU/${i} $BUILD
+if [ "$ISOHYBRID_TARGET" ] ; then
+	if [ ! -f ${PX}/usr/bin/isohybrid ] ; then
+		cp -fv ${ISOHYBRID_TARGET} ${PX}/usr/bin/isohybrid
 	fi
-done
+fi
+
+#===================================================
+# make an UEFI iso
+mk_iso() {
+	tmp_isoroot=$1 	# input
+	OUTPUT=$2 		# output
+	BOOT_CAT="-c boot/boot.catalog"
+	if [ "$UEFI_ISO" ] ; then
+		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} \
+			-eltorito-alt-boot -eltorito-platform efi -b boot/efi.img -no-emul-boot "$tmp_isoroot" || exit 100
+		[ $? -ne 0 ] && exit 1
+		UEFI_OPT=-u
+	else
+		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} "$tmp_isoroot" || exit 101
+		[ $? -ne 0 ] && exit 1
+		UEFI_OPT=''
+	fi
+	if [ "$ISOHYBRID" ] ; then
+		echo "Converting ISO to isohybrid."
+		echo "$ISOHYBRID ${UEFI_OPT} ${OUTPUT}"
+		${ISOHYBRID} ${UEFI_OPT} ${OUTPUT}
+		[ $? -ne 0 ] && exit 1
+	fi
+}
+#======================================================
+
+pic='puppy.png'
+case ${DISTRO_FILE_PREFIX} in
+	[Tt]ahr*)   pic='tahr.png'   ;;
+	[Ss]lacko*) pic='slacko.png' ;;
+	[Xx]enial*) pic='xenial.png' ;;
+esac
+echo $pic
+if [ -f ${PX}/usr/share/boot-dialog/${pic} ] ; then
+	cp -fv ${PX}/usr/share/boot-dialog/${pic} ${BUILD}/boot/splash.png
+fi
 
 #======================================================
 
-[ -n "$FIXUSB" ] && cp -a $FIXUSB $BUILD
+# grub4dos
+mkdir -p ${BUILD}/boot/grub/
+cp -f ${PX}/usr/share/boot-dialog/menu.lst ${BUILD}/boot/grub/
+cp -f ${PX}/usr/share/boot-dialog/menu_phelp.lst ${BUILD}/boot/grub/
+sed -i 's%configfile.*/menu%configfile /boot/grub/menu%' ${BUILD}/boot/grub/menu*
+sed -i 's%#graphicsmode%graphicsmode%' ${BUILD}/boot/grub/menu.lst
+sed -i 's%#splashimage%splashimage%' ${BUILD}/boot/grub/menu.lst
 
-mkdir -p ${BUILD}/help
-cp -f ${PX}/usr/share/boot-dialog/*.msg ${BUILD}/help/
-cp -f ${PX}/usr/share/boot-dialog/isolinux.cfg ${BUILD}/
-[ "$UEFI_ISO" ] && cp -f ${PX}/usr/share/boot-dialog/grub.cfg ${BUILD}/
+# grub2
+if [ "$UEFI_ISO" ] ; then
+	cp -f ${PX}/usr/share/boot-dialog/grub.cfg ${BUILD}/boot/grub/
+	GRUB_CFG="${BUILD}/boot/grub/grub.cfg"
+	cp -f ${PX}/usr/share/boot-dialog/grub.cfg ${BUILD}/
+	GRUB_CFG="$GRUB_CFG ${BUILD}/grub.cfg"
+	cp -f ${PX}/usr/share/boot-dialog/loopback.cfg ${BUILD}/boot/grub/
+	GRUB_CFG="$GRUB_CFG ${BUILD}/boot/grub/loopback.cfg"
+	#mkdir -p ${BUILD}/EFI/debian
+	#cp -f ${PX}/usr/share/boot-dialog/grub.cfg ${BUILD}/EFI/debian
+	#GRUB_CFG="$GRUB_CFG ${BUILD}/EFI/debian/grub.cfg"
+fi
 
-sed -i "s/menu resolution.*/menu resolution ${SCREENRES}/" ${BUILD}/isolinux.cfg
+if [ -f ${PX}/etc/os-release ] ; then
+	. ${PX}/etc/os-release # need $PRETTY_NAME
+else
+	PRETTY_NAME="$DISTRO_NAME $DISTRO_VERSION"
+fi
 
 sed -i -e "s/DISTRO_FILE_PREFIX/${DISTRO_FILE_PREFIX}/g" \
-		-e "s/DISTRO_DESC/${DISTRO_FILE_PREFIX} ${DISTRO_VERSION}/g" \
-		-e "s/BOOTLABEL/${BOOTLABEL}/g" \
-		${BUILD}/*.cfg ${BUILD}/help/*.msg
+		-e "s/DISTRO_DESC/${PRETTY_NAME}/g" \
+		-e "s/#distrodesc#/${PRETTY_NAME}/g" \
+		${GRUB_CFG} ${BUILD}/boot/grub/menu*
+
+sed -i -e "s% /splash.jpg% /boot/splash.jpg%" ${GRUB_CFG} ${BUILD}/boot/grub/menu*
+sed -i -e "s% /splash.png% /boot/splash.png%" ${GRUB_CFG} ${BUILD}/boot/grub/menu*
 
 #======================================================
-
-# build the efi image
-if [ "$UEFI_ISO" ] ; then
-	# custom backdrop
-	pic=puppy
-	case ${DISTRO_FILE_PREFIX} in
-		[Tt]ahr*)pic=tahr;;
-		[Ss]lacko*)pic=slacko;;
-		[Xx]enial*)pic=xenial;;
-	esac
-
-	# update and transfer the skeleton files
-	if [ -n "$PPMLABEL" ];then # label the image with version
-		GEOM="-x 680 -y 380"
-		pngtopnm < ${PX}/usr/share/boot-dialog/${pic}.png | \
-		${PPMLABEL} ${GEOM} ${TEXT} | \
-		pnmtopng > ${BUILD}/splash.png
-	else
-		cp -a ${PX}/usr/share/boot-dialog/${pic}.png ${BUILD}/splash.png
-	fi
-
-	mk_efi_img $BUILD
-	ret=$?
-	if [ $ret -ne 0 ];then
-		echo "An error occured and the program is aborting with $ret status."
-		exit $ret
-	fi
-fi
 
 # build the iso
 sync

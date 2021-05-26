@@ -16,14 +16,6 @@ echo '' > /var/local/pup_event_icon_change_flag
 #/sbin/pup_event_frontend_d &
 #130525 ...start this further down.
 
-#w482 reshape background image if widescreen...
-#120708 need to reshape for PUPMODE=2 also...
-#[ $PUPMODE -eq 5 ] && /usr/sbin/background_reshape
-NEEDRESHAPE='yes'
-[ -f /usr/share/backgrounds_original/ORIGINAL-default.jpg ] && NEEDRESHAPE='no'
-[ -f /usr/share/backgrounds_original/ORIGINAL-default.png ] && NEEDRESHAPE='no'
-[ "$NEEDRESHAPE" = "yes" ] && /usr/sbin/background_reshape
-
 userresources=$HOME/.Xresources
 usermodmap=$HOME/.Xmodmap
 sysresources=/usr/lib/X11/xinit/Xresources
@@ -46,6 +38,8 @@ fi
 if [ -f $usermodmap ]; then
     xmodmap $usermodmap
 fi
+
+xhost +local: 2>/dev/null
 
 CURRENTWM="`cat /etc/windowmanager`"
 if [ "$CURRENTWM" = "startkde" ];then
@@ -74,6 +68,8 @@ if [ -e /tmp/videomode ];then #xvesa only: testing a video mode
 fi
 
 [ -f /usr/local/bin/agenda_chk ] && agenda_chk &
+
+
 
 #v1.0.7 set by xrandrshell, part of xorg wizard... v3.99...
 if [ -f /etc/xrandrindex ];then
@@ -133,6 +129,11 @@ case $desktop in
 	fi
 	;;
 esac
+
+# hack for Xwayland: for some reason, Xft.dpi is empty if .Xresources is loaded earlier
+if [ -n "$WAYLAND_DISPLAY" -a -f $userresources ]; then
+    xrdb -merge -nocpp $userresources
+fi
 
 /sbin/pup_event_frontend_d & #130525 moved down.
 

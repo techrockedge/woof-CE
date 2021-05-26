@@ -87,17 +87,33 @@ function xorg_screen_res_dlg_stuff() {
 	else
 		DEFAULT_RES=$(report-video res)
 	fi
+if [ -e /var/local/xorg-detect-screen-size ]; then
+  RESOLUTIONS=`xrandr --screen 0 | grep -E '*[0-9]x[0-9].*[0-9]\.' | awk '{ print $1 }' | sed '/640x480/q'`
+else
 	#- screen resolutions (edit this)
 	RESOLUTIONS="1024x768
 800x600
+1024x600
+1280x720
 1280x800
 1280x1024
 1366x768
 1440x900
+1440x960
+1440x1080
+1600x900       
+1600x1200
 1680x1050
 1920x1080
+2048x1080
 2560x1440
-3840x2160"
+3440x1440
+3840x2160
+4096x2160
+5120x2880
+8192x4320"
+
+fi
 	#- messages
 	export SCREEN_RES_TITLE=$(gettext 'Screen resolution')
 	export SCREEN_RES_MSG1=$(gettext "Choose a reasonable resolution for your hardware. 
@@ -111,15 +127,25 @@ If Xorg does not apply the requested screen resolution then your hardware does n
 
 if [ "$AUTOMATIC" = "1" ] ; then
 
-# There are 2 possibilities:
+if [ -x /usr/sbin/xorg-autoconf ] ; then
+	/usr/sbin/xorg-autoconf > /etc/X11/xorg.conf
+	THE_END=1	
+else
+# There are 3 possibilities:
 # - xorg.conf.udev (highest priority - /var/local/xorg_udev)
+# - xorg.conf.udev.fbturbo (pi and other arm boards)
 # - xorg.conf-auto-pc (everything else)
 
-if [ -f /var/local/xorg_udev ] ; then
-	cp -fv /etc/X11/xorg.conf.udev /etc/X11/xorg.conf
-	THE_END=1
-else
-	cp -fv /etc/X11/xorg.conf-auto-pc /etc/X11/xorg.conf
+	if [ -f /var/local/xorg_udev ] ; then
+		if [ -e "/usr/share/X11/xorg.conf.d/99-fbturbo.conf" ] && [ -e "/usr/lib/xorg/modules/drivers/fbturbo_drv.so" ] ; then
+			cp -fv /etc/X11/xorg.conf.udev.fbturbo /etc/X11/xorg.conf
+		else
+			cp -fv /etc/X11/xorg.conf.udev /etc/X11/xorg.conf
+		fi
+		THE_END=1
+	else
+		cp -fv /etc/X11/xorg.conf-auto-pc /etc/X11/xorg.conf
+	fi
 fi
 
 set_xorg_video_driver
@@ -143,9 +169,20 @@ fi
 
 TOUCHPAD=''
 OLD3='Section "Monitor"'
+
 [ "`grep 'Elantech' /proc/bus/input/devices`" ] && TOUCHPAD='Elantech'
+[ "`grep 'Vendor=10e9' /proc/bus/input/devices`" ] && TOUCHPAD='Elantech'
+[ "`grep 'Vendor=04f3' /proc/bus/input/devices`" ] && TOUCHPAD='Elantech'
+
 [ "`grep 'Alps' /proc/bus/input/devices`" ] && TOUCHPAD='Alps'
+[ "`grep 'Vendor=0433' /proc/bus/input/devices`" ] && TOUCHPAD='Alps'
+[ "`grep 'Vendor=044e' /proc/bus/input/devices`" ] && TOUCHPAD='Alps'
+[ "`grep 'Vendor=048c' /proc/bus/input/devices`" ] && TOUCHPAD='Alps'
+
 [ "`grep 'Synaptics' /proc/bus/input/devices`" ] && TOUCHPAD='Synaptics'
+[ "`grep -E 'SYNA*' /proc/bus/input/devices`" ] && TOUCHPAD='Synaptics'
+[ "`grep 'Vendor=06cb' /proc/bus/input/devices`" ] && TOUCHPAD='Synaptics'
+
 if [ "$TOUCHPAD" ];then
  . /etc/rc.d/MODULESCONFIG #ADDLIST
  if [ "`lsmod | grep '^evdev'`" = "" ];then
@@ -333,6 +370,7 @@ MSG_4="$(gettext 'New xorg.conf (reset)')"
 MSG_SET_SR=$(gettext 'Set screen resolution...')
 MSG_SET_CBD=$(gettext 'Set color bith depth...')
 MSG_SET_VDRIVER="$(gettext 'Set video driver...')"
+MSG_START_X="$(gettext 'Start X Window System')"
 
 (
 echo -n 'dialog --title "'${TITLE_0}'" --ok-label "'$(gettext 'OK')'" --no-cancel \
@@ -340,13 +378,14 @@ echo -n 'dialog --title "'${TITLE_0}'" --ok-label "'$(gettext 'OK')'" --no-cance
 
 '${MSG_2}'" 0 0 0 \
 	"-" "'${MSG_NO_CONFIG}'" \
-	"1)" "'${MSG_SET_VDRIVER}'" \
-	"2)" "'${MSG_SET_SR}'" \
-	"3)" "'${MSG_SET_CBD}'" \
-	"4)" "'${MSG_4}'"'
+	"1)" "'${MSG_START_X}'" \
+	"2)" "'${MSG_SET_VDRIVER}'" \
+	"3)" "'${MSG_SET_SR}'" \
+	"4)" "'${MSG_SET_CBD}'" \
+	"5)" "'${MSG_4}'"'
 	if [ -x /opt/xorg_alt/usr/bin/Xorg ] ; then
 		echo -n ' \
-	"5)" "'${MSG_ALTXORG}'"'
+	"6)" "'${MSG_ALTXORG}'"'
 	fi
 	echo ' >/dev/tty 2>/tmp/xorg.cli.res'
 	echo 'exit $?'
@@ -359,10 +398,11 @@ rm -f /tmp/xorg.cli /tmp/xorg.cli.res
 
 case $XCHOICE in
 	"-") exit ;;
-	"1)") cli_xorg_video_driver ;;
-	"2)") cli_xorg_screen_res   ;;
-	"3)") cli_xorg_color_depth  ;;
-	"4)")
+	"1)") xwin $(cat /etc/windowmanager) ;;
+	"2)") cli_xorg_video_driver ;;
+	"3)") cli_xorg_screen_res   ;;
+	"4)") cli_xorg_color_depth  ;;
+	"5)")
 		dialog --title "$(gettext 'reset xorg.conf')" \
 			--no-label "$(gettext 'Cancel')" --yes-label "$(gettext 'Confirm')" \
 			--yesno "$(gettext 'All custom settings (if any) will be lost.
@@ -370,11 +410,11 @@ case $XCHOICE in
 xorgwizard-automatic will run so the new xorg.conf is usable')" 0 0
 		if [ $? -eq 0 ] ; then
 			rm -f /tmp/xorg.res /tmp/xorg.depth /tmp/xorg.video.driver
-			xorgwizard-automatic &>/dev/null
+			xorgwizard-automatic >/dev/null 2>&1
 			dialog --msgbox "$(gettext "xorg.conf has been reset. The command to start X is 'xwin'...")" 7 35
 		fi
 		;;
-	"5)")
+	"6)")
 		# * This requires a custom Xorg server package ready to be used
 		#   and it must be placed in /var/xorg_alt
 		# * It must be already tested and with all the needed drivers and dependencies..
@@ -439,7 +479,7 @@ export -f help
 . /etc/rc.d/BOOTCONSTRAINED #120723
 
 
-if which nvidia-settings &>/dev/null && NRATE=$(nvidia-settings -q RefreshRate | grep '[0-9]') ; then
+if which nvidia-settings >/dev/null 2>&1 && NRATE=$(nvidia-settings -q RefreshRate | grep '[0-9]') ; then
 	NVIDIABUTTON='<button space-expand="false" space-fill="false" tooltip-text="'$(gettext 'Launch the NVIDIA X Server Settings.')'">
   '"`/usr/lib/gtkdialog/xml_button-icon /usr/share/pixmaps/nvidia48x32.png`"'
   <label>'$(gettext "nvidia-settings")'</label>
@@ -467,18 +507,21 @@ $(echo "$RESOLUTIONS" | grep -v "^${DEFAULT_RES}$" | sed -e 's|^|<item>|' -e 's|
 	DPI_COMBO="<item>$CURRENT_DPI</item>
 $(echo "$DPI_LIST" | tr '!' '\n' | grep -v "^${CURRENT_DPI}$" | sed -e 's|^|<item>|' -e 's|$|</item>|')"
 	#--
-	export RES_WINDOW='<window title="'${SCREEN_RES_TITLE}'" icon-name="gtk-preferences" window-position="1">
+	export RES_WINDOW='
+<window title="'${SCREEN_RES_TITLE}'" icon-name="gtk-preferences" window-position="1" resizable="false">
 <vbox>
 '$(/usr/lib/gtkdialog/xml_info fixed graphics.svg 48 "$(gettext "Set screen resolution")")'
   <frame Screen Resolution>
   <text space-fill="true"><label>'${SCREEN_RES_MSG2}'</label></text>
   <vbox space-expand="false" space-fill="false">
     <hbox>
-       <combobox>
+       <hbox space-fill="true" space-expand="true">
+       <comboboxtext>
         '${GUI_RESOLUTIONS}'
         <variable>CHOSEN_RES</variable>
         <visible>enabled</visible>
-       </combobox>
+       </comboboxtext>
+       </hbox>
         <button>
           '"`/usr/lib/gtkdialog/xml_button-icon info mini`"'
           <action>help resolution</action>
@@ -491,10 +534,12 @@ $(echo "$DPI_LIST" | tr '!' '\n' | grep -v "^${CURRENT_DPI}$" | sed -e 's|^|<ite
    <text space-fill="true"><label>'$(gettext "You probably don't want to set this..")'</label></text>
    <vbox space-expand="false" space-fill="false">
     <hbox>
-      <combobox>
+      <hbox space-fill="true" space-expand="true">
+      <comboboxtext>
         '${COLOR_DEPTHS}'
         <variable>CHOSEN_CD</variable>
-       </combobox>
+       </comboboxtext>
+       </hbox>
        <button>
           '"`/usr/lib/gtkdialog/xml_button-icon info mini`"'
           <action>help color</action>
@@ -506,10 +551,12 @@ $(echo "$DPI_LIST" | tr '!' '\n' | grep -v "^${CURRENT_DPI}$" | sed -e 's|^|<ite
   <frame '$(gettext 'Font DPI')'>
    <vbox space-expand="false" space-fill="false">
     <hbox>
-       <combobox>
+       <hbox space-fill="true" space-expand="true">
+       <comboboxtext>
         '${DPI_COMBO}'
         <variable>CHOSEN_DPI</variable>
-       </combobox>
+       </comboboxtext>
+       </hbox>
        <button>
           '"`/usr/lib/gtkdialog/xml_button-icon info mini`"'
           <action>help dpi</action>
@@ -534,7 +581,7 @@ $(echo "$DPI_LIST" | tr '!' '\n' | grep -v "^${CURRENT_DPI}$" | sed -e 's|^|<ite
 </window>'
 
 	. /usr/lib/gtkdialog/xml_info gtk
-	eval "$(gtkdialog --center --program RES_WINDOW)"
+	eval "$(gtkdialog --center --program RES_WINDOW --styles=/tmp/gtkrc_xml_info.css)"
 
 	[ "$EXIT" != "OK" ] && exit
 	if [ "$CHOSEN_RES" != "" ] ; then
@@ -621,11 +668,29 @@ function gui_opt() { #exit icon msg
         </hbox>'
 }
 
+
+if [ "$(which xscreensaver)" != "" ]; then
+ 
+ if [ "$(which xscreensaver-demo-shell)" != "" ]; then
+  binexec="xscreensaver-demo-shell"
+ else
+  binexec="xscreensaver-demo"
+ fi 
+
+ xSCREENSAVER="$(gui_opt "$binexec" graphics.svg "$(gettext '<b>Sreensaver</b>
+Configure screensaver..')")"
+else
+ xSCREENSAVER="$(gui_opt "pupx screensaver" graphics.svg "$(gettext '<b>Sreensaver</b>
+Configure screensaver..')")"
+fi
+
+
+
 export MAIN1='
-<window title="'$(gettext 'Xorg Video Wizard')'" image-name="/usr/share/pixmaps/puppy/graphics_xorg.svg">
+<window title="'$(gettext 'Xorg Video Wizard')'" image-name="/usr/share/pixmaps/puppy/graphics_xorg.svg" resizable="false">
 <vbox space-expand="true" space-fill="true">
   <notebook labels="'$(gettext 'Screen')'|'$(gettext 'Advanced')'" space-expand="true" space-fill="true">
-    <vbox space-expand="true" space-fill="true">
+    <vbox space-expand="true" space-fill="true" margin="8">
       <frame '$(gettext 'Screen tuning')'>
       '"`/usr/lib/gtkdialog/xml_info fixed graphics.svg 60 "$(gettext '<b>Screen tuning</b> depends on the loaded video/graphics driver, so if correct resolution is not there, check the advanced tab...')"`"'
         '$(gui_opt "xorgwizard setscreenres" graphics_xorg.svg "$(gettext '<b>Screen resolution / Color depth (xorg.conf)</b>
@@ -634,12 +699,11 @@ Guarantees a proper X startup..')")'
         '$(gui_opt "xrandr_x" screen_resolution.svg "$(gettext '<b>Screen resolution (xrandr)</b>
 How many vertical and horizontal pixels fits your screen..')")'
         <hseparator></hseparator>
-        '$(gui_opt "pupx screensaver" graphics.svg "$(gettext '<b>Sreensaver</b>
-Configure screensaver..')")'
+        '$xSCREENSAVER'
        </frame>
     </vbox>
 
-    <vbox space-expand="true" space-fill="true">
+    <vbox space-expand="true" space-fill="true" margin="8">
       <frame '$(gettext 'Manage xorg.conf')'>
         '"`/usr/lib/gtkdialog/xml_info fixed graphics.svg 60 "$(gettext 'The behaviour of Xorg is controlled by a configuration file, /etc/X11/xorg.conf. This was generated automatically at the first boot, you may edit it manually.')"`"'
         '$(gui_opt "defaulttexteditor /etc/X11/xorg.conf" edit.svg "$(gettext 'You can <b>manually edit</b> /etc/X11/xorg.conf, but you will need to <b>restart X</b> (see Shutdown menu).')")'
@@ -669,6 +733,6 @@ If the screen is displaced or the width/height are wrong. This will modify xorg.
 
 
 . /usr/lib/gtkdialog/xml_info gtk #build bg_pixmap for gtk-theme
-gtkdialog --center --program=MAIN1
+gtkdialog --center --program=MAIN1 --styles=/tmp/gtkrc_xml_info.css
 
 ### END ###

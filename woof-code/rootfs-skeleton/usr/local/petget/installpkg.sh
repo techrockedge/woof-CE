@@ -23,7 +23,6 @@
 #111013 revert above. it works for me, except if file already on top -- that is another problem, needs to be addressed.
 #111207 improve search for menu icon.
 #111229 /usr/local/petget/removepreview.sh when uninstalling a pkg, may have copied a file from sfs-layer to top, check.
-#120102 install may have overwritten a symlink-to-dir.
 #120107 rerwin: need quotes around some paths in case of space chars. remove '--unlink-first' from tar (was introduced 120102, don't think necessary).
 #120126 noryb009: fix typo.
 #120219 was not properly internationalized (there was no TEXTDOMAIN).
@@ -39,12 +38,8 @@
 #121119 change in layout of /etc/xdg/menus/hierarchy caused regex pattern bug.
 #121119 if only one .desktop file, first check if a match in /usr/local/petget/categories.dat.
 #121120 bugfix of 121119.
-#121123 having a problem with multiarch symlinks in full-installation, getting replaced by a directory.
 #121206 default icon needs .xpm extension. note puppy uses older xdg-utilities, Icon field needs image ext.
-#121217 still getting reports multiarch symlinks getting overwritten.
 #130112 some deb's have a post-install script (ex: some python debs).
-#130112 multiarch symlinks now optional. see also 2createpackages, 3builddistro.
-#130114 revert 130112 "multiarch symlinks now optional".
 #130126 'categories.dat' format changed.
 #130219 grep, ignore case.
 #130305 rerwin: ensure tmp directory has all permissions after package expansion.
@@ -62,10 +57,12 @@ APPDIR=$(dirname $0)
 [ -f "$APPDIR/i18n_head" ] && source "$APPDIR/i18n_head"
 LANG_USER=$LANG
 export LANG=C
-. /etc/rc.d/PUPSTATE  #this has PUPMODE and SAVE_LAYER.
+[ -e /etc/rc.d/PUPSTATE ] && . /etc/rc.d/PUPSTATE  #this has PUPMODE and SAVE_LAYER.
 . /etc/DISTRO_SPECS #has DISTRO_BINARY_COMPAT, DISTRO_COMPAT_VERSION
 
 . /etc/xdg/menus/hierarchy #w478 has PUPHIERARCHY variable.
+
+[ "$PUPMODE" == "" ] && PUPMODE=2
 
 [ "$PUPMODE" = "2" ] && [ ! -d /audit ] && mkdir -p /audit
 
@@ -76,6 +73,7 @@ DL_SAVE_FLAG=$(cat /var/local/petget/nd_category 2>/dev/null)
 
 clean_and_die () {
   rm -f /root/.packages/${DLPKG_NAME}.files
+  [ "$PUPMODE" != "2" ] && busybox mount -t aufs -o remount,udba=reval unionfs / #remount with faster evaluation mode.
   exit 1
 }
 
@@ -121,7 +119,30 @@ install_path_check() {
 
 #get the pkg name ex: scite-1.77 ...
 dbPATTERN='|'"$DLPKG_BASE"'|'
+
 DLPKG_NAME="`cat /tmp/petget_proc/petget_missing_dbentries-Packages-* | grep "$dbPATTERN" | head -n 1 | cut -f 1 -d '|'`"
+
+if [ "$DLPKG_NAME" == "" ]; then
+
+ #fallback if DLPKG_NAME was empty
+
+ case $DLPKG_BASE in
+  *.pet) EXT=".pet" ;;
+  *.deb) EXT=".deb" ;;
+  *.tgz) EXT=".tgz" ;;
+  *.txz) EXT=".txz" ;;
+  *.tzst) EXT=".tzst" ;;
+  *.rpm) EXT=".rpm" ;;
+  *.tar.gz) EXT=".tar.gz" ;;
+  *.tar.xz) EXT=".tar.xz" ;;
+  *.tar.zst) EXT=".tar.zst" ;;
+  *) EXT="" ;;
+ esac
+
+ DLPKG_NAME="$(basename "$DLPKG_BASE" $EXT)"
+
+fi
+
 
 #131222 do not allow duplicate installs...
 PTN1='^'"$DLPKG_NAME"'|'
@@ -132,16 +153,11 @@ if [ "`grep "$PTN1" /root/.packages/user-installed-packages`" != "" ];then
   dialog ${DISPTIME1} --msgbox "$(gettext 'This package is already installed. Cannot install it twice:') ${DLPKG_NAME}" 0 0
  else
   LANG=$LANG_USER
-  if [ "$(</var/local/petget/ui_choice)" = "Classic" -o -f /tmp/petget_proc/install_classic ]; then
-   /usr/lib/gtkdialog/box_ok "$(gettext 'Puppy package manager')" error "$(gettext 'This package is already installed. Cannot install it twice:')" "<i>${DLPKG_NAME}</i>"
-   [ -f /tmp/petget_proc/install_classic ] && echo ${DLPKG_NAME} >> /tmp/petget_proc/pgks_failed_to_install_forced
-  else
-   /usr/lib/gtkdialog/box_ok "$(gettext 'Puppy package manager')" error "$(gettext 'This package is already installed. Cannot install it twice:')" "<i>${DLPKG_NAME}</i>" & 
-   XPID=$!
-   sleep 3
-   pkill -P $XPID
-   echo ${DLPKG_NAME} >> /tmp/petget_proc/pgks_failed_to_install_forced
-  fi
+  /usr/lib/gtkdialog/box_ok "$(gettext 'Puppy package manager')" error "$(gettext 'This package is already installed. Cannot install it twice:')" "<i>${DLPKG_NAME}</i>" & 
+  XPID=$!
+  sleep 3
+  pkill -P $XPID
+  echo ${DLPKG_NAME} >> /tmp/petget_proc/pgks_failed_to_install_forced
  fi
  exit 1
 fi
@@ -224,18 +240,6 @@ elif [ $PUPMODE -eq 13 ];then
 	   sleep 1
 	  done
 	  DIRECTSAVEPATH="/initrd${SAVE_LAYER}" #SAVE_LAYER is in /etc/rc.d/PUPSTATE.
-	  #rm -f $DIRECTSAVEPATH/pet.specs $DIRECTSAVEPATH/pinstall.sh $DIRECTSAVEPATH/puninstall.sh $DIRECTSAVEPATH/install/doinst.sh
-	  # create the symlinks needed if DISTRO_ARCHDIR is set
-	  if [ -n "$DISTRO_ARCHDIR" ];then
-		if [ ! -e "$DIRECTSAVEPATH/lib/$DISTRO_ARCHDIR" -o ! -e "$DIRECTSAVEPATH/usr/lib/$DISTRO_ARCHDIR" -o ! -e "$DIRECTSAVEPATH/usr/bin/$DISTRO_ARCHDIR" ];then
-		 mkdir -p $DIRECTSAVEPATH/lib
-		 mkdir -p $DIRECTSAVEPATH/usr/lib
-		 mkdir -p $DIRECTSAVEPATH/usr/bin
-		 ln -snf ./ $DIRECTSAVEPATH/lib/$DISTRO_ARCHDIR
-		 ln -snf ./ $DIRECTSAVEPATH/usr/lib/$DISTRO_ARCHDIR
-		 ln -snf ./ $DIRECTSAVEPATH/usr/bin/$DISTRO_ARCHDIR
-		fi
-	  fi
 	 fi
 	fi
 fi
@@ -254,7 +258,7 @@ case $DLPKG_BASE in
   DLPKG_MAIN="`basename $DLPKG_BASE .pet`"
   pet2tgz $DLPKG_BASE || exit 1
   tarball=$(echo ${DLPKG_MAIN}.tar.[gx]z)
-  PETFILES="$(tar --list -a -f $tarball)" || exit 1
+  PETFILES="$(tar --force-local --list -f $tarball)" || exit 1
   #check for renamed pets. Will produce an empty ${DLPKG_NAME}.files file
   PETFOLDER=$(echo "${PETFILES}" | cut -f 2 -d '/' | head -n 1)
   [ "$PETFOLDER" = "" ] && PETFOLDER=$(echo "${PETFILES}" | cut -f 1 -d '/' | head -n 1)
@@ -273,13 +277,13 @@ case $DLPKG_BASE in
    pPATTERN="s%^\\./${DLPKG_NAME}%%"
    echo "$PETFILES" | sed -e "$pPATTERN" -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
    install_path_check
-   tar -a -x --strip=2 --directory=${DIRECTSAVEPATH}/ -f ${tarball} #120102. 120107 remove --unlink-first
+   tar -x --force-local --strip=2 --directory=${DIRECTSAVEPATH}/ -f ${tarball} #120102. 120107 remove --unlink-first
   else
    #new2dir and tgz2pet creates them this way...
    pPATTERN="s%^${DLPKG_NAME}%%"
    echo "$PETFILES" | sed -e "$pPATTERN" -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
    install_path_check
-   tar -a -x --strip=1 --directory=${DIRECTSAVEPATH}/ -f ${tarball} #120102. 120107. 131122
+   tar -x --force-local --strip=1 --directory=${DIRECTSAVEPATH}/ -f ${tarball} #120102. 120107. 131122
   fi
   rm -f "${tarball}"
   [ $? -ne 0 ] && clean_and_die
@@ -290,43 +294,20 @@ case $DLPKG_BASE in
   [ $? -ne 0 ] && exit 1
   echo "$PFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
   install_path_check
-  # Workaround to avoid overwriting the $DISTRO_ARCHDIR symlink.  
-  if [ "$DISTRO_ARCHDIR" != "" -a "$(echo "$PFILES" | grep "$DISTRO_ARCHDIR")" != "" ]; then
-	[ -d /tmp/petget_proc/pget$$ ] && rm -rf /tmp/petget_proc/pget$$
-	mkdir -p /tmp/petget_proc/pget$$/${DLPKG_BASE}/
-	dpkg-deb -x $DLPKG_BASE /tmp/petget_proc/pget$$/${DLPKG_BASE}/
-	(
-	cd /tmp/petget_proc/pget$$/${DLPKG_BASE}/
-	for BASEDIR in bin lib usr/bin usr/lib usr/include ; do
-		if [ -d ./${BASEDIR}/${DISTRO_ARCHDIR} ] ; then
-			[ ! -d ${DIRECTSAVEPATH}/${BASEDIR} ] && mkdir -p ${DIRECTSAVEPATH}/${BASEDIR}
-			cp -a -f --remove-destination ./${BASEDIR}/${DISTRO_ARCHDIR}/* ${DIRECTSAVEPATH}/${BASEDIR}/
-			sync
-			rm -rf ./${BASEDIR}/${DISTRO_ARCHDIR}
-			if [ ! -e ${DIRECTSAVEPATH}/${BASEDIR}/${DISTRO_ARCHDIR} ] ; then
-				ln -s ./ ${DIRECTSAVEPATH}/${BASEDIR}/${DISTRO_ARCHDIR}
-			fi
-		fi
-	done
-	)
-	cp -a -f --remove-destination /tmp/petget_proc/pget$$/${DLPKG_BASE}/* ${DIRECTSAVEPATH}/
-	sync
-	rm -rf /tmp/petget_proc/pget$$
-  else
-	dpkg-deb -x $DLPKG_BASE ${DIRECTSAVEPATH}/
-  fi
+  dpkg-deb -x $DLPKG_BASE ${DIRECTSAVEPATH}/
   [ $? -ne 0 ] && clean_and_die
   [ -d /DEBIAN ] && rm -rf /DEBIAN #130112 precaution.
   dpkg-deb -e $DLPKG_BASE /DEBIAN #130112 extracts deb control files to dir /DEBIAN. may have a post-install script, see below.
  ;;
- *.tgz|*.txz|*.tar.gz|*.tar.xz|*.tar.bz2) #slackware, arch, etc..
+ *.t*z|*.tzst|*.tar.*z|*.tar.bz2|*.tar.zst) #slackware, arch, etc..
   DLPKG_MAIN="`basename $DLPKG_BASE`" #remove directory - filename only
   DLPKG_MAIN=${DLPKG_MAIN%*.tar.*}    #remove .tar.xx extension
   DLPKG_MAIN=${DLPKG_MAIN%.t[gx]z}    #remove .t[gx]z extension
-  PFILES="`tar --list -a -f $DLPKG_BASE`" || exit 1
+  DLPKG_MAIN=${DLPKG_MAIN%.tzst}    #remove .tzst extension
+  PFILES="`tar --force-local --list -a -f $DLPKG_BASE`" || exit 1
   echo "$PFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
   install_path_check
-  tar -a -x --directory=${DIRECTSAVEPATH}/ -f $DLPKG_BASE #120102. 120107
+  tar -x --force-local --directory=${DIRECTSAVEPATH}/ -f $DLPKG_BASE #120102. 120107
   [ $? -ne 0 ] && clean_and_die
  ;;
  *.rpm) #110523
@@ -338,25 +319,21 @@ case $DLPKG_BASE in
   echo "$PFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' > /root/.packages/${DLPKG_NAME}.files
   install_path_check
   #110705 rpm -i does not work for mageia pkgs...
-  exploderpm -i $DLPKG_BASE
+  
+  if [ "$(cpio --help | grep "\-\-directory")" != "" ];  then
+   rpm2cpio $DLPKG_BASE | cpio -idmu -D ${DIRECTSAVEPATH}/
+  else
+   lastpath=$(pwd)
+   cd ${DIRECTSAVEPATH}/
+   rpm2cpio $DLPKG_BASE | cpio -idmu
+  fi
+  
   [ $? -ne 0 ] && clean_and_die
+  
+  [ "$lastpath" != "" ] && cd $lastpath
+  
  ;;
 esac
-
-multiarch_hack() {
-	#hack for multiarch, in case a symlink was replaced by a directory...
-	if [ "$DISTRO_ARCHDIR" ];then
-		for BASEDIR in bin lib usr/bin usr/lib usr/include
-		do
-			if [ -d /${BASEDIR}/${DISTRO_ARCHDIR} -a ! -L /${BASEDIR}/${DISTRO_ARCHDIR} ] ; then
-				cp -a -f --remove-destination /${BASEDIR}/${DISTRO_ARCHDIR}/* /${BASEDIR}/
-				sync
-				rm -rf /${BASEDIR}/${DISTRO_ARCHDIR}
-				ln -s ./ /${BASEDIR}/${DISTRO_ARCHDIR}
-			fi
-		done
-	fi
-}
 
 if [ "$PUPMODE" = "2" ]; then #from BK's quirky6.1
 	mkdir /audit/${DLPKG_NAME}DEPOSED
@@ -381,41 +358,13 @@ if [ "$PUPMODE" = "2" ]; then #from BK's quirky6.1
 	#now write temp-location to final destination...
 	cp -a -f --remove-destination ${DIRECTSAVEPATH}/* /  2> /tmp/petget_proc/petget/install-cp-errlog
 	sync
-	#can have a problem if want to replace a folder with a symlink. for example, got this error:
-	# cp: cannot overwrite directory '/usr/share/mplayer/skins' with non-directory
-	#3builddistro has this fix... which is a vice-versa situation...
-	#firstly, the vice-versa, source is a directory, target is a symlink...
-	CNT=0
-	while [ -s /tmp/petget_proc/petget/install-cp-errlog ];do
-	  echo -n '' > /tmp/petget_proc/petget/install-cp-errlog2
-	  echo -n '' > /tmp/petget_proc/petget/install-cp-errlog3
-	  cat /tmp/petget_proc/petget/install-cp-errlog | grep 'cannot overwrite non-directory' | grep 'with directory' | tr '[`‘’]' "'" | cut -f 2 -d "'" |
-	  while read ONEDIRSYMLINK #ex: /usr/share/mplayer/skins
-	  do
-	   if [ -h "${ONEDIRSYMLINK}" ];then #source is a directory, target is a symlink...
-	    #adding that extra trailing / does the trick...
-	    cp -a -f --remove-destination ${DIRECTSAVEPATH}"${ONEDIRSYMLINK}"/* "${ONEDIRSYMLINK}"/ 2>> /tmp/petget_proc/petget/install-cp-errlog2
-	   else #source is a directory, target is a file...
-	    rm -f "${ONEDIRSYMLINK}" #delete the file!
-	    DIRPATH="$(dirname "${ONEDIRSYMLINK}")"
-	    cp -a -f ${DIRECTSAVEPATH}"${ONEDIRSYMLINK}" "${DIRPATH}"/ 2>> /tmp/petget_proc/petget/install-cp-errlog2 #copy directory (and contents).
-	   fi
-	  done
-	  cat /tmp/petget_proc/petget/install-cp-errlog2 >> /tmp/petget_proc/petget/install-cp-errlog3
-	  cat /tmp/petget_proc/petget/install-cp-errlog3 > /tmp/petget_proc/petget/install-cp-errlog
-	  sync
-	  CNT=$(($CNT + 1))
-	  [ $CNT -gt 10 ] && break #something wrong, get out.
-	done
-	multiarch_hack
-	#end 131220
 
 	rm -rf ${DIRECTSAVEPATH} #131229 131230
 	[ "$DL_SAVE_FLAG" != "true" ] && rm -f $DLPKG_BASE 2>/dev/null
 	rm -f $DLPKG_MAIN.tar.gz 2>/dev/null
 	#pkgname.files may need to be fixed...
 	FIXEDFILES="`cat /root/.packages/${DLPKG_NAME}.files | grep -v '^\\./$'| grep -v '^/$' | sed -e 's%^\\.%%' -e 's%^%/%' -e 's%^//%/%'`"
-	echo "$FIXEDFILES" > /root/.packages/${DLPKG_NAME}.files 
+	echo "$FIXEDFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' | sort > /root/.packages/${DLPKG_NAME}.files 
 	DIRECTSAVEPATH=/ # set it to the new cocation
 
 else #-- anything other than PUPMODE 2 (full install) --
@@ -425,47 +374,7 @@ else #-- anything other than PUPMODE 2 (full install) --
 
 	#pkgname.files may need to be fixed...
 	FIXEDFILES="`cat /root/.packages/${DLPKG_NAME}.files | grep -v '^\\./$'| grep -v '^/$' | sed -e 's%^\\.%%' -e 's%^%/%' -e 's%^//%/%'`"
-	echo "$FIXEDFILES" > /root/.packages/${DLPKG_NAME}.files
-
-	#120102 install may have overwritten a symlink-to-dir...
-	#tar defaults to not following symlinks, for both dirs and files, but i want to follow symlinks
-	#for dirs but not for files. so, fix here... (note, dir entries in .files have / on end)
-	cat /root/.packages/${DLPKG_NAME}.files | grep '[a-zA-Z0-9]/$' | sed -e 's%/$%%' | grep -v '^/mnt' |
-	while read ONESPEC
-	do
-	 if [ -d "${DIRECTSAVEPATH}${ONESPEC}" ];then
-	  if [ ! -h "${DIRECTSAVEPATH}${ONESPEC}" ];then
-	   DIRLINK=""
-	   if [ -h "/initrd${PUP_LAYER}${ONESPEC}" ];then #120107
-	    DIRLINK="`readlink -m "/initrd${PUP_LAYER}${ONESPEC}" | sed -e "s%/initrd${PUP_LAYER}%%"`" #PUP_LAYER: see /etc/rc.d/PUPSTATE. 120107
-	    xDIRLINK="`readlink "/initrd${PUP_LAYER}${ONESPEC}"`" #120107
-	   fi
-	   if [ ! "$DIRLINK" ];then
-	    if [ -h "/initrd${SAVE_LAYER}${ONESPEC}" ];then #120107
-	     DIRLINK="`readlink -m "/initrd${SAVE_LAYER}${ONESPEC}" | sed -e "s%/initrd${SAVE_LAYER}%%"`" #SAVE_LAYER: see /etc/rc.d/PUPSTATE. 120107
-	     xDIRLINK="`readlink "/initrd${SAVE_LAYER}${ONESPEC}"`" #120107
-	    fi
-	   fi
-	   if [ "$DIRLINK" ];then
-	    if [ -d "$DIRLINK"  ];then
-	     if [ "$DIRLINK" != "${ONESPEC}" ];then #precaution.
-	      mkdir -p "${DIRECTSAVEPATH}${DIRLINK}" #120107
-	      cp -a -f --remove-destination ${DIRECTSAVEPATH}"${ONESPEC}"/* "${DIRECTSAVEPATH}${DIRLINK}/" #ha! fails if put double-quotes around entire expression.
-	      rm -rf "${DIRECTSAVEPATH}${ONESPEC}"
-	      if [ "$DIRECTSAVEPATH" = "" ];then
-	       ln -s "$xDIRLINK" "${ONESPEC}"
-	      else
-	       DSOPATH="`dirname "${DIRECTSAVEPATH}${ONESPEC}"`"
-	       DSOBASE="`basename "${DIRECTSAVEPATH}${ONESPEC}"`"
-	       rm -f "${DSOPATH}/.wh.${DSOBASE}" #allow underlying symlink to become visible on top.
-	      fi
-	     fi
-	    fi
-	   fi
-	  fi
-	 fi
-	done
-	multiarch_hack
+	echo "$FIXEDFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' | sort > /root/.packages/${DLPKG_NAME}.files
 
 	#flush unionfs cache, so files in pup_save layer will appear "on top"...
 	if [ "$DIRECTSAVEPATH" != "" ];then
@@ -507,14 +416,17 @@ ls -dl /tmp | grep -q '^drwxrwxrwt' || chmod 1777 /tmp #130305 rerwin.
 for i in pinstall.sh install/doinst.sh DEBIAN/postinst
 do
 	[ ! -e "$DIRECTSAVEPATH/$i" ] && continue
-	chmod +x $DIRECTSAVEPATH/${i}
 	cd $DIRECTSAVEPATH/
-	LANG=$LANG_USER nohup sh ${i} &
-	sleep 0.2
+	LANG=$LANG_USER sh ${i}
+	sync
 	rm -f ${i}
 done
 rm -rf $DIRECTSAVEPATH/install
 rm -rf $DIRECTSAVEPATH/DEBIAN
+
+[ -e $DIRECTSAVEPATH/.MTREE ] && rm -f $DIRECTSAVEPATH/.MTREE
+[ -e $DIRECTSAVEPATH/.BUILDINFO ] && rm -f $DIRECTSAVEPATH/.BUILDINFO
+
 #130314 run arch linux pkg post-install script...
 if [ -f $DIRECTSAVEPATH/.INSTALL ];then #arch post-install script.
  if [ -f /usr/local/petget/ArchRunDotInstalls ];then #precaution. see 3builddistro, script created by noryb009.
@@ -537,6 +449,82 @@ if [ -f $DIRECTSAVEPATH/puninstall.sh ];then
  mv -f $DIRECTSAVEPATH/puninstall.sh /root/.packages/${DLPKG_NAME}.remove
 fi
 
+
+#Look for symbolic links created by post-scripts and update package file list
+#remove temp list first
+rm -rf /tmp/slink-append.txt 2>/dev/null
+
+#List all the library files in the package
+cat /var/packages/${DLPKG_NAME}.files | grep -E '*\.so$|*\.so\.*' > /tmp/libfiles2.txt
+
+#Evaluate the library files
+while IFS= read -r line
+do
+
+if [ -f $line ]; then
+
+  dname3="$(dirname $line)"
+  soname="$(basename $line)"
+  soname2="${soname%*.so.*}"
+  
+  for slink in $(find "$dname3" -name "${soname2}.so*" -maxdepth 1 -type l)
+  do
+    
+   slinkpt="$(echo $slink | sed -e 's#\+#\\\+#g' -e 's#\/#\\\/#g' -e 's#\-#\\\-#g' -e 's#\.#\\\.#g')"
+
+   if [ "$(cat /var/packages/package-files/${DLPKG_NAME}.files | grep -E "${slinkpt}\$")" == "" ]; then
+
+      srcf="$(readlink "$slink" 2>/dev/null)"
+
+      if [ "$srcf" != "" ]; then
+
+        so_bname="$(basename $srcf 2>/dev/null)"
+        srcfpt="$(echo "$so_bname" | sed -e 's#\+#\\\+#g' -e 's#\/#\\\/#g' -e 's#\-#\\\-#g' -e 's#\.#\\\.#g')"
+
+	    #check if the source file of the symlink was correct
+        if [ "$so_bname" != "" ] && [ "$so_bname" == "$soname" ]; then  
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	      echo "$slink" >> /tmp/slink-append.txt
+	     fi
+	     
+	    #Check if the source symlink already on the package file list 
+	    elif [ "$so_bname" != "" ] && [ "$(cat /var/packages/package-files/${DLPKG_NAME}.files  | grep -E "\/${srcfpt}\$")" != "" ]; then
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat cat /var/packages/package-files/*.files 2>/dev/null | grep -E "${slinkpt}\$")" == "" ]; then
+	      if [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	       echo "$slink" >> /tmp/slink-append.txt
+	      fi
+	     fi
+	    
+	    #Check if the source symlink was owned by other packages
+        elif [ "$so_bname" != "" ] && [ "$(cat /var/packages/package-files/*.files 2>/dev/null | grep -E "\/${srcfpt}\$")" == "" ]; then
+	     if [ ! -f /tmp/slink-append.txt ]; then
+	      echo "$slink" > /tmp/slink-append.txt
+	     elif [ "$(cat cat /var/packages/package-files/*.files 2>/dev/null | grep -E "${slinkpt}\$")" == "" ]; then
+	      if [ "$(cat /tmp/slink-append.txt | grep -E "${slinkpt}\$")" == "" ]; then
+	       echo "$slink" >> /tmp/slink-append.txt
+	      fi
+	     fi
+        fi
+        
+      fi
+      
+    fi
+
+   done
+   
+fi
+
+done < /tmp/libfiles2.txt
+
+
+[ -e /tmp/slink-append.txt ] && cat /tmp/slink-append.txt >> /var/packages/${DLPKG_NAME}.files
+rm -rf /tmp/slink-append.txt 2>/dev/null
+
+
 #w465 <pkgname>.pet.specs is in older pet pkgs, just dump it...
 #maybe a '$APKGNAME.pet.specs' file created by dir2pet script...
 rm -f $DIRECTSAVEPATH/*.pet.specs 2>/dev/null
@@ -551,6 +539,11 @@ else
  [ -f $DIRECTSAVEPATH/pet.specs ] && rm -f $DIRECTSAVEPATH/pet.specs #w482 remove zero-byte file.
  dlPATTERN='|'"`echo -n "$DLPKG_BASE" | sed -e 's%\\-%\\\\-%'`"'|'
  DB_ENTRY="`cat /tmp/petget_proc/petget_missing_dbentries-Packages-* | grep "$dlPATTERN" | head -n 1`"
+ 
+ if [ "$DB_ENTRY" == "" ]; then
+  DB_ENTRY="$DLPKG_NAME|$DLPKG_NAME|1.0.0|1||||${DLPKG_BASE}|||"
+ fi
+
 fi
 ##+++2011-12-27 KRG check if $DLPKG_BASE matches DB_ENTRY 1 so uninstallation works :Ooops:
 db_pkg_name=`echo "$DB_ENTRY" |cut -f 1 -d '|'`
@@ -673,49 +666,6 @@ do
   sed -i -e "$iPATTERN" $ONEDOT #note, ONEDOT is name of .desktop file.
  fi
  
- #120926 if a langpack installed, it will have /usr/share/applications.in (see /usr/sbin/momanager, /usr/share/doc/langpack-template/pinstall.sh).
- ABASEDESKTOP="`basename $ONEDOT`"
- ADIRDESKTOP="`dirname $ONEDOT`"
- if [ -f /usr/share/applications.in/${ABASEDESKTOP} ];then
-  TARGETLANG="`echo -n $LANG_USER | cut -f 1 -d '_'`" #ex: de
-  tlPTN="^Name\[${TARGETLANG}\]"
-  if [ "$(grep "$tlPTN" ${ADIRDESKTOP}/${ABASEDESKTOP})" = "" ];then
-   if [ "$(grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP})" != "" ];then
-    #aaargh, these accursed back-slashes! ....
-    INSERTALINE="`grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP} | sed -e 's%\[%\\\\[%' -e 's%\]%\\\\]%'`"
-    sed -i -e "s%^Name=%${INSERTALINE}\\nName=%" ${ADIRDESKTOP}/${ABASEDESKTOP}
-   fi
-  fi
-  #do same for Comment field...
-  tlPTN="^Comment\[${TARGETLANG}\]"
-  if [ "$(grep "$tlPTN" ${ADIRDESKTOP}/${ABASEDESKTOP})" = "" ];then
-   if [ "$(grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP})" != "" ];then
-    #aaargh, these accursed back-slashes! ....
-    INSERTALINE="`grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP} | sed -e 's%\[%\\\\[%' -e 's%\]%\\\\]%'`"
-    sed -i -e "s%^Comment=%${INSERTALINE}\\nComment=%" ${ADIRDESKTOP}/${ABASEDESKTOP}
-   fi
-  fi
-  #well, i suppose need this too...
-  TARGETLANG="`echo -n $LANG_USER | cut -f 1 -d '.'`" #ex: de_DE
-  tlPTN="^Name\[${TARGETLANG}\]"
-  if [ "$(grep "$tlPTN" ${ADIRDESKTOP}/${ABASEDESKTOP})" = "" ];then
-   if [ "$(grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP})" != "" ];then
-    #aaargh, these accursed back-slashes! ....
-    INSERTALINE="`grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP} | sed -e 's%\[%\\\\[%' -e 's%\]%\\\\]%'`"
-    sed -i -e "s%^Name=%${INSERTALINE}\\nName=%" ${ADIRDESKTOP}/${ABASEDESKTOP}
-   fi
-  fi
-  #do same for Comment field...
-  tlPTN="^Comment\[${TARGETLANG}\]"
-  if [ "$(grep "$tlPTN" ${ADIRDESKTOP}/${ABASEDESKTOP})" = "" ];then
-   if [ "$(grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP})" != "" ];then
-    #aaargh, these accursed back-slashes! ....
-    INSERTALINE="`grep "$tlPTN" /usr/share/applications.in/${ABASEDESKTOP} | sed -e 's%\[%\\\\[%' -e 's%\]%\\\\]%'`"
-    sed -i -e "s%^Comment=%${INSERTALINE}\\nComment=%" ${ADIRDESKTOP}/${ABASEDESKTOP}
-   fi
-  fi
- fi
- 
 done
 
 #due to images at / in .pet and post-install script, .files may have some invalid entries...
@@ -759,18 +709,88 @@ if [ "$DESKTOPFILE" != "" ];then
  fi
 fi
 
-#If there is an already installed package, just update the package files list and its database entry
-xpkgname="$(echo "$DB_ENTRY" | cut -f 2 -d '|')"
-installed_pkg="$(cat /root/.packages/user-installed-packages | grep "|$xpkgname|")"
 
-if [ "$installed_pkg" != "" ]; then
+xpkgname="$(echo "$DB_ENTRY" | cut -f 2 -d '|')"
+installed_pkg="$(cat /var/packages/user-installed-packages | grep "|$xpkgname|")"
+
+PKGDEP="$(echo "$DB_ENTRY" | cut -f 9 -d '|')"
+PKGDESC="$(echo "$DB_ENTRY" | cut -f 10 -d '|')"
+PKGCAT="$(echo "$DB_ENTRY" | cut -f 5 -d '|')"
+
+
+#Final package entry fix. Look for package database for closest package information if deps/description/category is missing
+if [ "$PKGDEP" == "" ] || [ "$PKGDESC" == "" ] || [ "$PKGCAT" == "" ]; then
+ 
+ if [ -e /var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} ]; then
+  DBREF="/var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}"
+ elif [ -e /var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}-official ]; then
+  DBREF="/var/packages/Packages-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}-official"
+ fi
+ 
+ if [ "$DBREF" != "" ]; then
+
+  FDEP="$PKGDEP"
+  FDESC="$PKGDESC"
+  FCAT="$PKGCAT"
+ 
+  nPKG="$(cat "$DBREF" | grep "|$xpkgname|" | head -n 1)"
+  
+  if [ "$nPKG" != "" ]; then
+   [ "$PKGDEP" == "" ] && FDEP="$(echo "$nPKG" | cut -f 9 -d '|')"
+   [ "$PKGDESC" == "" ]  && FDESC="$(echo "$nPKG" | cut -f 10 -d '|')"
+   [ "$PKGCAT" == "" ] && FCAT="$(echo "$nPKG" | cut -f 5 -d '|')"
+  fi
+  
+  #Rebuilt package entry
+  
+  pkgname="$(echo "$DB_ENTRY" | cut -f 1 -d '|')"
+  nameonly="$(echo "$DB_ENTRY" | cut -f 2 -d '|')"
+  version="$(echo "$DB_ENTRY" | cut -f 3 -d '|')"
+  pkgrelease="$(echo "$DB_ENTRY" | cut -f 4 -d '|')"
+  size="${PKGSIZEK}K"
+  path="$(echo "$DB_ENTRY" | cut -f 7 -d '|')"
+  fullfilename="$(echo "$DB_ENTRY" | cut -f 8 -d '|')"
+  compileddistro="$(echo "$DB_ENTRY" | cut -f 11 -d '|')"
+  compiledrelease="$(echo "$DB_ENTRY" | cut -f 12 -d '|')"
+  repo="$(echo "$DB_ENTRY" | cut -f 13 -d '|')"
+  
+  DB_ENTRY="$pkgname|$nameonly|$version|$pkgrelease|$FCAT|$size|$path|$fullfilename|$FDEP|$FDESC|$compileddistro|$compiledrelease|$repo|"
+  
+ fi
+ 
+fi
+
+#If there is an already installed package, just update the package files list and its database entry
+
+PKGUPDOWN=""
+
+if [ "$xpkgname" != "" ] && [ "$installed_pkg" != "" ]; then
+  #There is an already installed package. Just update the package file list
   installed_files="$(echo "$installed_pkg" | cut -f 1 -d '|')"
   if [ "$installed_files" != "" ]; then
+   #Check if the old package file list exists
     if [ -e /root/.packages/${installed_files}.files ]; then
+    
 	while IFS= read -r xline
 	do
+	 #Check if the file was a part of the newly installed package
   	 if [ "$(cat /root/.packages/${DLPKG_NAME}.files | grep "$xline")" == "" ]; then
-	  echo "$xline" >> /root/.packages/${DLPKG_NAME}.files
+	  #Not a part of newly installed package. Do action
+
+	   #Delete the file which is not a part of upgrade
+	   if [ -e "$xline" ] || [ -L "$xline" ]; then
+	    
+	    [ -e "/initrd/pup_rw$xline" ] && rm -f "/initrd/pup_rw$xline"
+	    [ -L "/initrd/pup_rw$xline" ] && rm -f "/initrd/pup_rw$xline"
+	    
+	    [ -e "/initrd${SAVE_LAYER}${xline}" ] && rm -f "/initrd${SAVE_LAYER}${xline}"
+	    [ -L "/initrd${SAVE_LAYER}${xline}" ] && rm -f "/initrd${SAVE_LAYER}${xline}"
+	    
+	    [ -e "$xline" ] && rm -f "$xline"
+	    [ -L "$xline" ] && rm -f "$xline"
+	   
+	   fi
+
 	 fi
 	done < /root/.packages/${installed_files}.files
 	
@@ -780,6 +800,8 @@ if [ "$installed_pkg" != "" ]; then
 	echo "$DB_ENTRY" >> /root/.packages/user-installed-packages.tmp
 	cp -f /root/.packages/user-installed-packages.tmp /root/.packages/user-installed-packages
 	rm -f  /root/.packages/user-installed-packages.tmp
+	
+	PKGUPDOWN="y"
 	
     else
      echo "$DB_ENTRY" >> /root/.packages/user-installed-packages
@@ -791,8 +813,36 @@ else
  echo "$DB_ENTRY" >> /root/.packages/user-installed-packages
 fi
 
+if [ $PUPMODE -eq 2 ]; then
+	if [ "$xpkgname" != "" ] && [ "$installed_pkg" == "" ]; then
+	  if [ "$PKGUPDOWN" == "" ]; then
+	    #Check if the old builtin file list exists
+	    if [ -e /root/.packages/builtin_files/${xpkgname} ]; then
+		while IFS= read -r xline
+		do
+		
+		 #Check if the file was a part of the newly installed package
+		 if [ "$(cat /root/.packages/${DLPKG_NAME}.files | grep "$xline")" == "" ]; then
+		  #Not a part of newly installed package. Do action
+
+		   #Delete the file which is not a part of upgrade
+		   if [ -e "$xline" ] || [ -L "$xline" ]; then
+		    [ -e "$xline" ] && rm -f "$xline"
+		    [ -L "$xline" ] && rm -f "$xline"
+		   fi
+		   
+		 fi
+		done < /root/.packages/builtin_files/${xpkgname}
+	    fi
+	  fi
+	fi
+fi
+
+
+
 #120907 post-install hacks...
 /usr/local/petget/hacks-postinstall.sh $DLPKG_MAIN
+/usr/local/petget/hacks-postinstall2.sh "/root/.packages/${DLPKG_NAME}.files" 2>/dev/null
 
 #announcement of successful install...
 #announcement is done after all downloads, in downloadpkgs.sh...
@@ -813,60 +863,9 @@ if [ "$HOMEUSER" != "root" ];then
  done
 fi
 
-#120523 precise puppy needs this... (refer also rc.update and 3builddistro)
-PKGFILES="/root/.packages/${DLPKG_NAME}.files"
-
-if [ "`grep '/usr/share/glib-2.0/schemas' $PKGFILES`" != "" ];then
- [ -e /usr/bin/glib-compile-schemas ] && /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas
-fi
-
-if [ "`grep '/usr/lib/gio/modules' $PKGFILES`" != "" ];then
- [ -e /usr/bin/gio-querymodules ] && /usr/bin/gio-querymodules /usr/lib/gio/modules
-fi
-
-if [ "`grep '/usr/share/applications/' $PKGFILES`" != "" ];then
- if [ -e /usr/bin/update-desktop-database ] ; then
-   rm -f /usr/share/applications/mimeinfo.cache
-   /usr/bin/update-desktop-database /usr/share/applications
- fi
-fi
-
-if [ "`grep '/usr/share/mime/' $PKGFILES`" != "" ];then
- [ -e /usr/bin/update-mime-database ] && /usr/bin/update-mime-database /usr/share/mime
-fi
-
-if [ "`grep '/usr/share/icons/hicolor/' $PKGFILES`" != "" ];then
- [ -e /usr/bin/gtk-update-icon-cache ] && /usr/bin/gtk-update-icon-cache /usr/share/icons/hicolor
-fi
-
-if [ "`grep '/usr/lib/gdk-pixbuf' $PKGFILES`" != "" ];then
- gdk-pixbuf-query-loaders --update-cache
-fi
-
-if [ "`grep '/usr/lib/gconv/' $PKGFILES`" != "" ];then
- iconvconfig
-fi
-
-if [ "`grep '/usr/lib/pango/' $PKGFILES`" != "" ];then
- pango-querymodules --update-cache
-fi
-
-for gtkver in '1.0' '2.0' '3.0'
-do
- if [ "`grep "/usr/lib/gtk-$gtkver" $PKGFILES | grep "/immodules"`" != "" ];then
-  [ -e /usr/bin/gtk-query-immodules-$gtkver ] && gtk-query-immodules-$gtkver --update-cache
- fi
-done
-
-if [ "`grep '/usr/share/fonts/' $PKGFILES`" != "" ];then
- fc-cache -f
-fi
-
-KERNVER="$(uname -r)"
-
-if [ "`grep "/lib/modules/$KERNVER/" $PKGFILES`" != "" ];then
- depmod -a
-fi
+PKGFILES=/root/.packages/${DLPKG_NAME}.files
+# update system cache
+/usr/local/petget/z_update_system_cache.sh "$PKGFILES"
 
 rm -f $HOME/nohup.out
 

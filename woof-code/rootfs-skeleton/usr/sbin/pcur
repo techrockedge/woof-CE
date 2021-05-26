@@ -28,9 +28,9 @@ func_switch (){
 		fi
 	fi
 	if [ "$UPDATE_WM" != "false" ] ; then
-		if pidof jwm &>/dev/null ; then
+		if pidof jwm >/dev/null 2>&1 ; then
 			jwm -restart
-		elif pidof openbox &>/dev/null ; then
+		elif pidof openbox >/dev/null 2>&1 ; then
 			openbox --restart
 		fi
 	fi
@@ -137,7 +137,7 @@ S='
      <button space-expand="false" space-fill="false">
        '"`/usr/lib/gtkdialog/xml_button-icon internet`"'
        <label>'$(gettext 'More themes')'</label>
-       <action>defaulthtmlviewer http://www.murga-linux.com/puppy/viewtopic.php?t=37852 &</action>
+       <action>defaulthtmlviewer https://oldforum.puppylinux.com/viewtopic.php?t=37852 &</action>
      </button>'
      [ "`which ptheme`" ] && S=$S'<button space-expand="false" space-fill="false">
        '"`/usr/lib/gtkdialog/xml_button-icon puppy_theme.svg`"'
@@ -168,6 +168,6 @@ S='
 </window>'
 export Pcur="$S"
 . /usr/lib/gtkdialog/xml_info gtk #build bg_pixmap for gtk-theme
-RETVARS="`gtkdialog -p Pcur`"
+RETVARS="`gtkdialog -p Pcur --styles=/tmp/gtkrc_xml_info.css`"
 
 ### END ###

@@ -7,25 +7,25 @@ export TEXTDOMAIN=logout_gui
 X_SERVER=`type X|awk '{print $3}'`
 X=`readlink $X_SERVER`
 MSG_X="$(gettext "Active graphical server"): <b>$X</b>"
-if pidof jwm &>/dev/null ; then
+if pidof jwm >/dev/null 2>&1 ; then
 	MSG_WM="$(gettext "Active window manager"): <b>JWM</b>"
 	RESTART_MENUAPP="$(gettext 'Restart window manager')"
 	MENUAPP=jwm
-elif pidof lxpanel &>/dev/null ; then
+elif pidof lxpanel >/dev/null 2>&1 ; then
 	RESTART_MENUAPP="$(gettext 'Restart LXPanel')"
 	MENUAPP=lxpanel
-	if pidof openbox &>/dev/null ; then
+	if pidof openbox >/dev/null 2>&1 ; then
 		MSG_WM="$(gettext "Active window manager"): <b>Openbox</b>"
 		RESTART_MENUAPP="$(gettext 'Restart LXPanel+Openbox')"
 	fi
-elif pidof openbox &>/dev/null ; then
+elif pidof openbox >/dev/null 2>&1 ; then
 	MSG_WM="$(gettext "Active window manager"): <b>Openbox</b>"
 	RESTART_MENUAPP="$(gettext 'Restart Openbox')"
 	MENUAPP=openbox
 fi
 
 S='
-<window title="'$(gettext 'Puppy Log Out')'" icon-name="gtk-preferences" window-position="1">
+<window title="'$(gettext 'Puppy Log Out')'" icon-name="gtk-preferences" window-position="1" resizable="false">
 <vbox space-expand="true" space-fill="true">
   '"`/usr/lib/gtkdialog/xml_info fixed puppy_config.svg 60 "$MSG_WM" "$MSG_X"`"'
   <vbox spacing="10" space-expand="true" space-fill="true">
@@ -91,7 +91,7 @@ S='
 export logout="$S"
 
 . /usr/lib/gtkdialog/xml_info gtk > /dev/null #build bg_pixmap for gtk-theme
-retvals="`gtkdialog -p logout`"
+retvals="`gtkdialog -p logout --styles=/tmp/gtkrc_xml_info.css`"
 eval "$retvals"
 case $EXIT in
   logout)exec wmexit ;;
@@ -104,7 +104,7 @@ case $EXIT in
 		jwm) jwm -restart ;;
 		lxpanel)
 			lxpanelctl restart
-			pidof openbox &>/dev/null && openbox --restart
+			pidof openbox >/dev/null 2>&1 && openbox --restart
 			;;
 	esac
 	;;

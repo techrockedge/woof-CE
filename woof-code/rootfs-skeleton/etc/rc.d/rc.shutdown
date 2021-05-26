@@ -24,7 +24,7 @@ if [ ! -f /tmp/debugshutdown ] ; then
 fi
 
 #if don't do this, may be locked at next boot...
-which rfkill &>/dev/null && rfkill unblock all
+which rfkill >/dev/null 2>&1 && rfkill unblock all
 
 . /etc/rc.d/PUPSTATE #variables created at bootup by init script in initrd...
 . /etc/DISTRO_SPECS
@@ -61,9 +61,10 @@ while [ "`pidof snapmergepuppy`" ]; do sleep 1 ; done
 cd /
 sync
 echo "Killing X and all X apps..."
-killall -9 X > /dev/null 2>&1 #just a precaution...
+killall -TERM X > /dev/null 2>&1 #just a precaution...
+killall -TERM Xorg > /dev/null 2>&1 #just a precaution...
+killall -TERM Xwayland > /dev/null 2>&1 #just a precaution...
 sleep 1
-killall -3 X > /dev/null 2>&1
 sync
 
 #MU warns may need to do this for dillo...
@@ -74,11 +75,17 @@ killall dpid 2>/dev/null
 # some packages have a service script that requires stopping...
 for service_script in $(ls /etc/init.d/* | sort -r)
 do
-	[ -x $service_script ] && $service_script stop
+  #Stop service except for dbus. Dbus will be stopped later...
+  if [ -x $service_script ] && [ "$(cat $service_script | grep "dbus-daemon")" == "" ]; then
+   $service_script stop
+  fi
 done
 #note, /etc/rc.d/rc.services does same, with 'start' parameter.
 
 [ "$PUNIONFS" = "aufs" ] && sfs_load --cli stop
+
+#remove file leftover by alsa script
+rm -f /tmp/snd-kmod.lst 2>/dev/null
 
 ### cleanly unmount cifs shares from /usr/share/Shares
 # must be done here otherwise hang later at mount -a -r at rc.cleanup
@@ -87,6 +94,7 @@ find /usr/share/Shares/ -maxdepth 2 -name mnt-point | while read p; do
 	case $p in
 		"") break ;;
 		*)  if grep -q $p /proc/mounts; then
+		                sync
 				fuser -mk $p 
 				${p%/*}/AppRun unmount
 			fi ;;
@@ -94,11 +102,13 @@ find /usr/share/Shares/ -maxdepth 2 -name mnt-point | while read p; do
 done
 # yassm
 for p in $(awk '$2 ~ "YASSM" {print $2}' /proc/mounts); do
+        sync
 	fuser -mk $p 
 	umount $p
 done
 #01micko: umount is not a reliable script, so have to use umount-FULL
 #also see shinobar's msg in http://murga-linux.com/puppy/viewtopic.php?p=605451#605451
+sync
 umount-FULL -a -t cifs,smbfs,nfs,sshfs
 ###
 
@@ -120,6 +130,9 @@ for i in /sys/class/net/* ; do
 	fi
 done
 
+#terminate dbus daemon
+killall dbus-daemon 2>/dev/null
+
 killall udevd > /dev/null 2>&1
 
 #first time booted puppy, there may not have been any persistent storage...
@@ -137,6 +150,14 @@ if [ $PUPMODE -eq 5 ];then
    rm -f /tmp/shutdownconfig_results #precaution.
  fi
 fi #end ifpupmode5
+
+if [ $PUPMODE -eq 13 ]; then
+ #read a file named /tmp/session_ramdisk_result, the answer file whether save the ramdisk session to savefile or not
+ #It contains variable RAMDISK_SAVE_SESSION where the values are 'y' or 'n'
+ if [ -s /tmp/session_ramdisk_result ]; then
+  . /tmp/session_ramdisk_result
+ fi
+fi
 
 if [ "$PUPSAVE" != "" ];then
  #f.s. and partition where ${DISTRO_FILE_PREFIX}save.2fs is located...
@@ -156,24 +177,6 @@ echo -n "$DATESAVE" > /var/local/shutdown_date_saved
 #the top aufs layer, meaning that there is no intermediary tmpfs in ram for working
 #files, hence everything is saved directly, ditto for PUPMODE=2 a full h.d. install.
 #hence need to do some explicit wiping here...
-
-# underdog - remove whiteout files for mounted underdog
-if [ "$(mount | grep "/pup_ud")" != "" ]; then
-    if [ -e /initrd/pup_ud/etc/xdg/autostart ]; then
-	  for dfile in $(ls -1 /initrd/pup_ud/etc/xdg/autostart 2>/dev/null) ; do
-	   [ -e /initrd/pup_rw/etc/xdg/autostart/.wh.$dfile ] && rm -f /initrd/pup_rw/etc/xdg/autostart/.wh.$dfile
-	  done
-    fi
-    if [ -e /initrd/pup_ud/etc/init.d ]; then
-      rm -f /initrd/pup_rw/etc/init.d/.wh.rcS 2>/dev/null
-      rm -f /initrd/pup_rw/etc/init.d/.wh.rCS 2>/dev/null
-      rm -f /initrd/pup_rw/etc/init.d/.wh.rc 2>/dev/null
-	  for dfile in $(ls -1 /initrd/pup_ud/etc/init.d 2>/dev/null) ; do
-	    [ -e /initrd/pup_rw/etc/init.d/.wh.$dfile ] && rm -f /initrd/pup_rw/etc/init.d/.wh.$dfile
-	  done
-    fi
-fi
-
 cat /var/log/messages* > /var/log/previous.messages
 rm -f /var/log/messages*
 rm -f /var/lock/LCK*
@@ -186,9 +189,11 @@ rm -f /tmp/geany_socket* 2>/dev/null #if geany still running at shutdown
 [ -f /etc/rc.d/MORESFS ] && rm /etc/rc.d/MORESFS
 sync
 
-# 140417, SFR
 asktosave_func () {
- if [ "$ASKTOSAVE" = "false" ]; then
+ # if $RAMSAVEINTERVAL > 0, session is saved automatically
+ if [ "$RAMSAVEINTERVAL" ] && [ $RAMSAVEINTERVAL -gt 0 ] ; then
+   RETVAL=0
+ elif [ "$ASKTOSAVE" = "false" ]; then
    RETVAL=0
  else
    dialog --timeout 60 --yes-label "$(gettext 'SAVE')" --no-label "$(gettext 'NO SAVE')" --yesno "$(gettext 'Press ENTER key to save session... 
@@ -231,7 +236,7 @@ case $PUPMODE in
    mount -t $FILEFS -o noatime,rw /dev/mapper/savefile /tmp/save1stpup
   fi
   #120522 testing precise puppy with aufs, have two dirs here .wh..wh.orph, .wh..wh.plnk, filter out...
-  RDIRS="`find /initrd/pup_rw/ -mindepth 1 -maxdepth 1 -mount -type d | grep -v '/\.wh\.' | grep -v -E '/$|/mnt|/tmp|/proc|/sys|/dev|/lost' | tr '\n' ' '`"
+  RDIRS="`find /initrd/pup_rw/ -mindepth 1 -maxdepth 1 -mount -type d | grep -v '/\.wh\.' | grep -v -E '/$|/mnt|/media|/tmp|/proc|/sys|/dev|/lost' | tr '\n' ' '`"
   for ONEDIR in $RDIRS
   do
    BASENAME="`basename $ONEDIR`"
@@ -252,10 +257,11 @@ case $PUPMODE in
   [ -f /tmp/${DISTRO_FILE_PREFIX}initmodules.txt ] && cp -f /tmp/${DISTRO_FILE_PREFIX}initmodules.txt ${SMNTPT}${SAVEPATH}/${DISTRO_FILE_PREFIX}initmodules.txt
   sync
   if [ ! -L /tmp/save1stpup ] ; then
+    sync
     umount /tmp/save1stpup
     [ "$CRYPTO" = "luks" ] && cryptsetup luksClose savefile
   fi
-
+  sync
   umount $SMNTPT 2> /dev/null
  ;;
 
@@ -265,10 +271,30 @@ case $PUPMODE in
  13) #PDEV1 and PUPSFS and PUPSAVE 
   #/initrd/pup_rw has tmpfs, pup_ro1 has ${DISTRO_FILE_PREFIX}save.2fs file (PUPSAVE), pup_ro2 has PUPSFS file. 
   #the above are in aufs at /.
-  asktosave_func
-  if [ $? -eq 0 ]; then 
+  if [ "$RAMDISK_SAVE_SESSION" == "" ]; then
+   asktosave_func
+   retval=$?
+  elif [ "$RAMDISK_SAVE_SESSION" == "y" ]; then
+   retval=0
+  else
+   retval=1
+  fi
+  if [ $retval -eq 0 ]; then 
     echo "$(printf "$(gettext 'Saving session to %s (%s)...')" "${SAVEFILE}" "${SAVEPART}")" >/dev/console
     /usr/sbin/snapmergepuppy /initrd/pup_ro1 /initrd/pup_rw
+  fi 
+  ;;
+ 66) #every shutdown, save to archive - for vfat
+  if [ -e /tmp/rc.shutdown_config ];then #is after shutdownconfig
+    STATUS=0
+  else
+    RAMSAVEINTERVAL=''
+    ASKTOSAVE='true'
+    asktosave_func
+    STATUS=$?
+  fi
+  if [ $STATUS -eq 0 ]; then
+    /usr/sbin/savesession-archive
   fi 
   ;;
  *)
@@ -282,8 +308,14 @@ esac
 sync
 
 swapoff -a #works only if swaps are in mtab or ftab
+
 STRAYPARTD="`cat /proc/swaps | grep "/" | cut -f 1 -d " " | tr "\n" " "`"
-for S in $STRAYPARTD ; do swapoff $S ; done
+
+for S in $STRAYPARTD
+do
+ sync
+ swapoff $S
+done
 
 # Karl Godt: 2013-12-14 reworked the whole unmount block
 MOUNTED=`tac /proc/mounts | grep -vE '/dev |/dev/root | rootfs | / | usbfs | aufs | tmpfs ' | cut -f2 -d' '`
@@ -300,10 +332,9 @@ for MOUNT_POINT in $STRAY_MOUNTPOINTS ; do
   [ "$xFUSER" ] && busybox fuser -k -m "$MOUNT_POINT"
  fi
   killzombies
- sync
- umount -r "$MOUNT_POINT" # karl godt.
+  sync
+  umount -r "$MOUNT_POINT" # karl godt.
 done
-sync
 
 # old code to attempt to free the PDEV1 (PDRV) [doen't seem to work]
 # - "note, there is a problem with unmounting, especially ntfs as it cannot be
@@ -327,11 +358,6 @@ fi
 
 #=======================================================
 
-PIVOT_INITRD=
-if [ -f /tmp/shutdown_pivot_initrd ] ; then # /sbin/poweroff
-	PIVOT_INITRD=1
-fi
-
 # remount PUNIONFS read-only
 if [ "$SAVE_LAYER" ];then
 	SAVEDEV=`grep "/initrd${SAVE_LAYER}" /proc/mounts | cut -f 1 -d ' '`
@@ -339,26 +365,64 @@ if [ "$SAVE_LAYER" ];then
 	#Patriot suggested this code to enable save-layer to remount ro...
 	uniFS=$(awk '/unionfs/ {print $3}' /proc/mounts) #gets fstype, ex: aufs
 	if [ "$uniFS" = "aufs" -a "$SAVE_LAYER" = "/pup_rw" ]; then
+	        sync
 		busybox mount -o remount,noxino,noplink,ro -t $uniFS / / >/dev/null 2>&1
 		sync
 	fi
 	if [ "$SAVEDEV" ]; then
+		sync
+		
 		busybox mount -t $SAVEFS -o remount,ro $SAVEDEV /initrd${SAVE_LAYER} >/dev/null 2>&1
-		if [ ! "$PIVOT_INITRD" ] ; then
-			# lazy unmount savefile only if /initrd/files is not mounted
-			umount-FULL -i -n -l /initrd${SAVE_LAYER} >/dev/null 2>&1 #-l is lazy unmount.
-		fi
+		
+		sync
+                   
+		   #remove from unionfs
+		   if [ "$uniFS" == "aufs" ]; then
+		    busybox mount -t aufs -o remount,del:/initrd${SAVE_LAYER} unionfs /
+		   else
+		    busybox mount -t unionfs -o remount,del=/initrd${SAVE_LAYER} unionfs /
+		   fi
+		
+		
+		# lazy unmount savefile only if /initrd/files is not mounted
+		sync
+		umount-FULL -i -n -l /initrd${SAVE_LAYER} >/dev/null 2>&1 #-l is lazy unmount.
+	else
+	   
+	   #Unload save folder gracefully
+	
+	   if [ -L /initrd${SAVE_LAYER} ]; then
+   
+	    rm /initrd${SAVE_LAYER}
+
+	    SPDRV="$(echo "$PUPSAVE" | cut -f 1 -d ',')"
+	    SPFS="$(echo "$PUPSAVE" | cut -f 2 -d ',')"  
+	    PFOLDER="$(echo "$PUPSAVE" | cut -f 3 -d ',')"
+	    PDRVPATH="/initrd${PUP_HOME}/$PFOLDER"
+
+	    sync
+
+	    #Remove from unionfs
+	    if [ "$uniFS" == "aufs" ]; then
+	     busybox mount -t aufs -o remount,del:${PDRVPATH} unionfs /
+	    else
+	     busybox mount -t unionfs -o remount,del=${PDRVPATH} unionfs /
+	    fi
+
+	   fi
 	fi
+	
+	if [ "$ABSPUPHOME" != "" ] && [ "$(mount | grep "$ABSPUPHOME")" != "" ]; then
+	 #Unmount the home drive if possible
+	 sync
+  	 umount "$ABSPUPHOME" 2>/dev/null
+ 	fi
 fi
 
-# full installs end here
-# also end here if not pivoting into initrd (rc.cleanup)
-if [ ! "$PIVOT_INITRD" ] ; then
-	rm -f /tmp/shutdown_pivot_initrd /tmp/debugshutdown /tmp/shutdownshell
-	umount.crypto_LUKS all
-	umount-FULL -in -a -r -d >/dev/null 2>&1
-fi
-
-# next: rc.cleanup
+sync
+umount.crypto_LUKS all
+sync
+umount-FULL -in -a -r -d >/dev/null 2>&1
+sync
 
 ### END ###

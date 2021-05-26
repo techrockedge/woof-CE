@@ -27,9 +27,15 @@
 export TEXTDOMAIN=petget___removepreview.sh
 export OUTPUT_CHARSET=UTF-8
 [ "$(locale | grep '^LANG=' | cut -d '=' -f 2)" ] && ORIGLANG="$(locale | grep '^LANG=' | cut -d '=' -f 2)"
-. /etc/rc.d/PUPSTATE  #111228 this has PUPMODE and SAVE_LAYER.
+[ -e /etc/rc.d/PUPSTATE ] && . /etc/rc.d/PUPSTATE  #111228 this has PUPMODE and SAVE_LAYER.
 . /etc/DISTRO_SPECS #has DISTRO_BINARY_COMPAT, DISTRO_COMPAT_VERSION
 . /root/.packages/DISTRO_PKGS_SPECS
+
+[ "$PUPMODE" == "" ] && PUPMODE=2
+
+#Check if the / is layered fs
+ISLAYEREDFS="$(mount | grep "on / type" | grep "unionfs")"
+[ "$ISLAYEREDFS" == "" ] && ISLAYEREDFS="$(mount | grep "on / type" | grep "aufs")"
 
 DB_pkgname="$TREE2"
 
@@ -50,6 +56,10 @@ elif [ ! "$DISPLAY" ]; then
  [ $? -ne 0 ] && exit 0
 fi
 
+if [ "$ISLAYEREDFS" != "" ];then
+ busybox mount -t aufs -o remount,udba=notify unionfs /
+fi
+
 #111228 if snapmergepuppy running, wait for it to complete (see also /usr/local/petget/installpkg.sh)...
 #note, inverse true, /sbin/pup_event_frontend_d will not run snapmergepuppy if removepreview.sh running.
 if [ $PUPMODE -eq 13 ];then
@@ -59,45 +69,89 @@ if [ $PUPMODE -eq 13 ];then
 fi
 
 if [ -f /root/.packages/${DB_pkgname}.files ];then
- if [ "$PUP_LAYER" = '/pup_ro2' ]; then #120103 shinobar.
-  cat /root/.packages/${DB_pkgname}.files |
+
+  cat /root/.packages/${DB_pkgname}.files | sort -r |
   while read ONESPEC
   do
-   if [ ! -d "$ONESPEC" ];then
-    #120103 shinobar: better way of doing this, look all lower layers...
-    Sx=$(ls /initrd/pup_{a,y,ro[0-9]*}"$ONESPEC" 2>/dev/null| grep -v '^/initrd/pup_ro1/')
-    INAY=$(echo $Sx | grep -E 'pup_a|pup_y')
-    if [ "$INAY" != "" ]; then
-     S=$(ls /initrd/pup_{a,y}"$ONESPEC" 2>/dev/null| grep -v '^/initrd/pup_ro1/'| tail -n 1)
-    else
-     S=$(ls /initrd/pup_ro{?,??}"$ONESPEC" 2>/dev/null| grep -v '^/initrd/pup_ro1/'| head -n 1)
-    fi # pup_ro2 - pup_ro99
-    if [ "$S" ]; then
-     #the problem is, deleting the file on the top layer places a ".wh" whiteout file,
-     #that hides the original file. what we want is to remove the installed file, and
-     #restore the original pristine file...
-     cp -a --remove-destination "$S" "$ONESPEC" #120103 shinobar.
-     #120103 apparently for odd# PUPMODEs, save layer may have a lurking old file and/or whiteout...
-     if [ $PUPMODE -eq 13 ];then
-      [ -f "/initrd${SAVE_LAYER}${ONESPEC}" ] && rm -f "/initrd${SAVE_LAYER}${ONESPEC}" #normally /pup_ro1
-      BN="`basename "$ONESPEC"`"
-      DN="`dirname "$ONESPEC"`"
-      [ -f "/initrd${SAVE_LAYER}${DN}/.wh.${BN}" ] && rm -f "/initrd${SAVE_LAYER}${DN}/.wh.${BN}"
+     
+     dname="$(dirname "$ONESPEC")"
+    
+     if [ "$dname" != "" ] && [ "$dname" != "/" ]; then
+     #Log the dirnames.
+       if [ ! -f /tmp/ppm-dirlists.txt ]; then
+        echo "$dname" > /tmp/ppm-dirlists.txt
+       elif [ "$(cat /tmp/ppm-dirlists.txt | grep "$dname")" == "" ]; then
+        echo "$dname"  >> /tmp/ppm-dirlists.txt
+       fi
      fi
-    else
-     rm -f "$ONESPEC"
+     
+     if [ -f "$ONESPEC" ] || [ -L "$ONESPEC" ]; then
+        #Check if is layered fs.
+        if [ "$ISLAYEREDFS" != "" ];then
+         
+	 #Delete at pup_rw layer
+         [ -e "/initrd/pup_rw${ONESPEC}" ] && rm -f "/initrd/pup_rw${ONESPEC}"
+  	 [ -L "/initrd/pup_rw${ONESPEC}" ] && rm -f "/initrd/pup_rw${ONESPEC}"
+  
+         #Delete file at save layer 
+         [ -e "/initrd${SAVE_LAYER}${ONESPEC}" ] && rm -f "/initrd${SAVE_LAYER}${ONESPEC}" #normally /pup_ro1
+         [ -L "/initrd${SAVE_LAYER}${ONESPEC}" ] && rm -f "/initrd${SAVE_LAYER}${ONESPEC}" #normally /pup_ro1
+         
+         BN="`basename "$ONESPEC"`"
+         DN="`dirname "$ONESPEC"`"
+         
+         #The file might be builtin just show the builtin files on top layer
+         [ -f "/initrd${SAVE_LAYER}${DN}/.wh.${BN}" ] && rm -f "/initrd${SAVE_LAYER}${DN}/.wh.${BN}"
+        
+        else
+         #Not layered fs. delete the file anyway
+         if [ -f "$ONESPEC" ] || [ -L "$ONESPEC" ]; then
+          rm -f "$ONESPEC"
+         fi
+        fi
+      fi
+  done
+ 
+ #do it again, looking for empty directories...
+ 
+ if [ -f /tmp/ppm-dirlists.txt ]; then
+  cat /tmp/ppm-dirlists.txt | sort -r |
+  while read ONESPEC
+  do
+   if [ "$ONESPEC" != "" ] && [ "$ONESPEC" != "/" ]; then
+    if [ -d "$ONESPEC" ]; then
+     if [ "$ISLAYEREDFS" != "" ]; then
+      #Delete folder if it was not builtin
+      if [ ! -d "/initrd${PUP_LAYER}${ONESPEC}" ]; then
+       [ "`ls -1 "$ONESPEC"`" == "" ] && rmdir "$ONESPEC" 2>/dev/null #120107
+      fi
+     else
+      [ "`ls -1 "$ONESPEC"`" == "" ] && rmdir "$ONESPEC" 2>/dev/null #120107
+     fi
     fi
    fi
   done
- fi
- #do it again, looking for empty directories...
- cat /root/.packages/${DB_pkgname}.files |
+  rm -f /tmp/ppm-dirlists.txt
+ fi 
+
+
+ cat /root/.packages/${DB_pkgname}.files | sort -r |
  while read ONESPEC
  do
-  if [ -d "$ONESPEC" ];then
-   [ "`ls -1 "$ONESPEC"`" = "" ] && rmdir "$ONESPEC" 2>/dev/null #120107
-  fi
+   if [ "$ONESPEC" != "" ] && [ "$ONESPEC" != "/" ]; then
+    if [ -d "$ONESPEC" ]; then
+     if [ "$ISLAYEREDFS" != "" ]; then
+      #Delete folder if it was not builtin
+      if [ ! -d "/initrd${PUP_LAYER}${ONESPEC}" ]; then
+       [ "`ls -1 "$ONESPEC"`" == "" ] && rmdir "$ONESPEC" 2>/dev/null #120107
+      fi
+     else
+      [ "`ls -1 "$ONESPEC"`" == "" ] && rmdir "$ONESPEC" 2>/dev/null #120107
+     fi
+    fi
+   fi
  done
+  
  ###+++2011-12-27 KRG
 else
  firstchar=`echo ${DB_pkgname} | cut -c 1`
@@ -291,6 +345,11 @@ export LANG="$ORIGLANG"
 
 fi
 
+if [ "$ISLAYEREDFS" != "" ];then
+ #now re-evaluate all the layers...
+	busybox mount -t aufs -o remount,udba=reval unionfs / #remount with faster evaluation mode.
+fi
+
 UPDATE_MENUS=''
 if [ -f /tmp/petget_proc/remove_pets_quietly ]; then
  LEFT=$(cat /tmp/petget_proc/pkgs_left_to_remove | wc -l)
@@ -298,7 +357,6 @@ if [ -f /tmp/petget_proc/remove_pets_quietly ]; then
 else
   UPDATE_MENUS=yes
 fi
-
 
 if [ "$UPDATE_MENUS" = "yes" ]; then
  #fix menu...
@@ -315,59 +373,9 @@ if [ "$UPDATE_MENUS" = "yes" ]; then
  fi
 fi
 
-PKGFILES="/root/.packages/${DB_pkgname}.files"
-
-if [ "`grep '/usr/share/glib-2.0/schemas' $PKGFILES`" != "" ];then
- [ -e /usr/bin/glib-compile-schemas ] && /usr/bin/glib-compile-schemas /usr/share/glib-2.0/schemas
-fi
-
-if [ "`grep '/usr/lib/gio/modules' $PKGFILES`" != "" ];then
- [ -e /usr/bin/gio-querymodules ] && /usr/bin/gio-querymodules /usr/lib/gio/modules
-fi
-
-if [ "`grep '/usr/share/applications/' $PKGFILES`" != "" ];then
- if [ -e /usr/bin/update-desktop-database ] ; then
-   rm -f /usr/share/applications/mimeinfo.cache
-   /usr/bin/update-desktop-database /usr/share/applications
- fi
-fi
-
-if [ "`grep '/usr/share/mime/' $PKGFILES`" != "" ];then
- [ -e /usr/bin/update-mime-database ] && /usr/bin/update-mime-database /usr/share/mime
-fi
-
-if [ "`grep '/usr/share/icons/hicolor/' $PKGFILES`" != "" ];then
- [ -e /usr/bin/gtk-update-icon-cache ] && /usr/bin/gtk-update-icon-cache /usr/share/icons/hicolor
-fi
-
-if [ "`grep '/usr/lib/gdk-pixbuf' $PKGFILES`" != "" ];then
- gdk-pixbuf-query-loaders --update-cache
-fi
-
-if [ "`grep '/usr/lib/gconv/' $PKGFILES`" != "" ];then
- iconvconfig
-fi
-
-if [ "`grep '/usr/lib/pango/' $PKGFILES`" != "" ];then
- pango-querymodules --update-cache
-fi
-
-for gtkver in '1.0' '2.0' '3.0'
-do
- if [ "`grep "/usr/lib/gtk-$gtkver" $PKGFILES | grep "/immodules"`" != "" ];then
-  [ -e /usr/bin/gtk-query-immodules-$gtkver ] && gtk-query-immodules-$gtkver --update-cache
- fi
-done
-
-if [ "`grep '/usr/share/fonts/' $PKGFILES`" != "" ];then
- fc-cache -f
-fi
-
-KERNVER="$(uname -r)"
-
-if [ "`grep "/lib/modules/$KERNVER/" $PKGFILES`" != "" ];then
- depmod -a
-fi
+PKGFILES=/root/.packages/${DB_pkgname}.files
+# update system cache
+/usr/local/petget/z_update_system_cache.sh "$PKGFILES"
 
 #what about any user-installed deps...
 remPATTERN='^'"$DB_pkgname"'|'
@@ -415,7 +423,10 @@ fi
 if [ ! -f /tmp/petget_proc/remove_pets_quietly ]; then
  export REM_DIALOG="<window title=\"$(gettext 'Puppy Package Manager')\" icon-name=\"gtk-about\">
   <vbox>
-  <pixmap><input file>/usr/share/pixmaps/puppy/dialog-complete.svg</input></pixmap>
+  <pixmap>
+  <width>48</width>
+  <height>48</height>
+  <input file>/usr/share/pixmaps/puppy/dialog-complete.svg</input></pixmap>
    <text><label>$(gettext 'Package') '$DB_pkgname' $(gettext 'has been removed.')</label></text>
    ${EXTRAMSG}
    <hbox>
@@ -425,7 +436,11 @@ if [ ! -f /tmp/petget_proc/remove_pets_quietly ]; then
  </window>
  "
  if [ "$DISPLAY" != "" ];then
-  gtkdialog -p REM_DIALOG
+  if [ "$EXTRAMSG" != "" ]; then
+   gtkdialog -p REM_DIALOG
+  else
+   /usr/lib/gtkdialog/box_ok "$(gettext 'Puppy Package Manager')" info "$(gettext 'Package') $(gettext 'has been removed.')" "$DB_pkgname"
+  fi
  fi
 elif [ -s /tmp/petget_proc/petget-deps-maybe-rem ];then
  for MAYBEREM in $(cat /tmp/petget_proc/petget-deps-maybe-remove)
