@@ -5,6 +5,8 @@
 #130212 removed glipper code, see latest glipper pet.
 #130525 old pc celeron 2ghz cpu, 256mb ram, CPUSPEED=1999, 1st bootup rox failed to start. try experiment.
 
+export XDG_SESSION_TYPE=x11
+
 [ -f /etc/desktop_app ] && read -r desktop < /etc/desktop_app
 [ "$desktop" = "" ] && desktop=rox
 
@@ -40,6 +42,27 @@ if [ -f $usermodmap ]; then
 fi
 
 xhost +local: 2>/dev/null
+
+# start a D-Bus session bus for both root and spot, for PulseAudio and applications that don't work without it
+eval `dbus-launch --exit-with-x11 --sh-syntax`
+run-as-spot dbus-launch --exit-with-x11 > /tmp/.spot-session-bus
+
+# start PipeWire/PulseAudio over the session bus and use it for both root and spot, so they see the same output devices
+if [ -e /usr/bin/wireplumber ]; then
+    rm -f /tmp/runtime-spot/pipewire-0
+    run-as-spot pipewire &
+    (
+        while [ ! -e /tmp/runtime-spot/pipewire-0 ]; do sleep 0.1; done
+        run-as-spot pipewire-pulse &
+        run-as-spot wireplumber &
+    ) &
+    export PULSE_SERVER=unix:/tmp/runtime-spot/pulse/native
+    export PULSE_COOKIE=/home/spot/.config/pulse/cookie
+elif [ -e /usr/bin/pulseaudio ]; then
+    run-as-spot sh -c "pulseaudio --kill > /dev/null 2>&1; pulseaudio --start --log-target=syslog"
+    export PULSE_SERVER=unix:/tmp/runtime-spot/pulse/native
+    export PULSE_COOKIE=/home/spot/.config/pulse/cookie
+fi
 
 CURRENTWM="`cat /etc/windowmanager`"
 if [ "$CURRENTWM" = "startkde" ];then

@@ -2,6 +2,17 @@
 #written by mistfire
 #automatically generate xorg configuration
 
+#Look for Xorg executable
+if [ "$(which Xorg)" != "" ]; then
+ XEXEC="$(which Xorg)" 
+elif [ "$(which X)" != "" ]; then
+ XEXEC="$(which X)"
+else
+ #Xorg not installed. It might be running Wayland
+ echo "# Xorg not found. Unable to generate xorg configuration."
+ exit
+fi
+
 XORG_PATHS="/usr/lib/xorg /usr/lib64/xorg /usr/lib/X11 /usr/lib64/X11"
 
 MODLIST="$(busybox lsmod 2>/dev/null)"
@@ -26,13 +37,6 @@ if [ "$UDEVD" == "" ] && [ -e /usr/lib/systemd/systemd-udevd ]; then
 elif [ "$UDEVD" == "" ] && [ -e /lib/systemd/systemd-udevd ]; then
  UDEVD="/lib/systemd/systemd-udevd"  
 fi 
-
-#Look for Xorg executable
-if [ "$(which Xorg)" != "" ]; then
- XEXEC="$(which Xorg)" 
-else
- XEXEC="$(which X)"
-fi
 
 #Look for xorg version
 XORG_VERSION="$($XEXEC -version 2>&1 | grep -oE "X Server.*" | grep -oE "[0-9]\..*\.[0-9]")"
@@ -698,6 +702,21 @@ bid="$(decode_busid "$xbid")"
 echo 'Section "Device"
 	Identifier  "Card'$cnum'"
 	BusID       "'$bid'" #card'$cnum'busid
+EndSection
+'	
+	
+}
+
+write_nodrv2(){
+	
+devid="$(echo "$1" | cut -f 2 -d ':')"
+cnum="$2"
+drvname="$3"
+xbid="$(echo "$PCILIST" | grep "$1" | cut -f 1 -d ' ')"
+bid="$(decode_busid "$xbid")"
+		
+echo 'Section "Device"
+	Identifier  "Card'$cnum'"
 EndSection
 '	
 	
@@ -1386,6 +1405,7 @@ else
 			003d) write_generic "${vid}:${dvid}" "$cnum" i740 ;;
 			10b4) write_generic "${vid}:${dvid}" "$cnum" s3virge ;;
 			1179) write_generic "${vid}:${dvid}" "$cnum" trident ;;
+			1af4) write_nodrv2 "${vid}:${dvid}" "$cnum" ;;
 			1115|104c|3d3d) write_generic "${vid}:${dvid}" "$cnum" glint ;;		
 			*) write_fallback "${vid}:${dvid}" "$cnum";;
 		esac

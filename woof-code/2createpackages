@@ -114,6 +114,8 @@ STRIP_BIN="`which strip`"
 rm -f ERROR-2CREATEPACKAGES 2>/dev/null
 
 pre_process_pkg() {
+	[ ! -d ${PKG_DIR} ] && return
+
 	# before processing the whole package, check if there is a _PRE file
 	# which contains code to fix/trim dowm stuff to speed up processing...
 	if [ -f ${MWD}/packages-templates/${GENERICNAME}/_PRE ] ; then
@@ -286,7 +288,6 @@ do
 			rm -f packages-${DISTRO_FILE_PREFIX}/${PETPKG}.tar
 			continue
 		fi
-		sync
 		rm -f packages-${DISTRO_FILE_PREFIX}/${PETPKG}.tar
 		if [ -d ${TARGET_DIR}/usr/share/applications/ ] ; then
 			sed -i 's| %u|| ; s| %U|| ; s| %f|| ; s| %F||' ${TARGET_DIR}/usr/share/applications/*.desktop
@@ -311,7 +312,6 @@ do
 			if [ ! "$DISABLE_POST_INSTALL_SCRIPT" ] ; then
 				echo " executing (Slackware) install script"
 				( cd ${TARGET_DIR} ; sh ./install/doinst.sh )
-				sync
 				rm -rf ${TARGET_DIR}/install
 			fi
 		fi
@@ -398,7 +398,7 @@ do
 			continue
 			;;
 		#-- DEV -- development
-		*"X11/config"|*"/include"|*"/pkgconfig"|*"/aclocal"|*"/cvs"*|*"/svn"*|*"/src"*|*"/gcc"|*"/girepository-1.0"*|*"/gir-1.0"*|*"/share/cmake"*)
+		*"X11/config"|*"/include"|*"/pkgconfig"|*"/aclocal"|*"/cvs"*|*"/svn"*|*"/src"*|*"/gcc"|*"/gir-1.0"*|*"/share/cmake"*)
 			if [ "$DEV" = "_NULL" ] ; then
 				rm -rf ${ONEDIR}
 				continue

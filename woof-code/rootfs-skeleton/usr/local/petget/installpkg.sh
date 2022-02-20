@@ -64,7 +64,7 @@ export LANG=C
 
 [ "$PUPMODE" == "" ] && PUPMODE=2
 
-[ "$PUPMODE" = "2" ] && [ ! -d /audit ] && mkdir -p /audit
+[ "$PUPMODE" = "2" -o "$PUPMODE" = "6" ] && [ ! -d /audit ] && mkdir -p /audit
 
 DLPKG="$1"
 DLPKG_BASE="`basename "$DLPKG"`" #ex: scite-1.77-i686-2as.tgz
@@ -167,7 +167,7 @@ read -r TFS TMAX TUSED TMPK TPERCENT TMNTPT <<<$(df -k | grep -w '^tmpfs') #free
 SIZEB=`stat -c %s "${DLPKG_PATH}"/${DLPKG_BASE}`
 SIZEK=$(( $SIZEB / 1024 ))
 EXPK=$(( $SIZEK * 5)) #estimated worst-case expanded size.
-if [ "$PUPMODE" = "2" ]; then # from BK's quirky6.1
+if [ "$PUPMODE" = "2" -o "$PUPMODE" = "6" ]; then # from BK's quirky6.1
 	#131220  131229 detect if not enough room in /tmp...
 	DIRECTSAVEPATH="/tmp/petget_proc/petget/directsavepath"
 	NEEDK=$EXPK
@@ -335,7 +335,7 @@ case $DLPKG_BASE in
  ;;
 esac
 
-if [ "$PUPMODE" = "2" ]; then #from BK's quirky6.1
+if [ "$PUPMODE" = "2" -o "$PUPMODE" = "6" ]; then #from BK's quirky6.1
 	mkdir /audit/${DLPKG_NAME}DEPOSED
 	echo -n '' > /tmp/petget_proc/petget/FLAGFND
 	find ${DIRECTSAVEPATH}/ -mindepth 1 | sed -e "s%${DIRECTSAVEPATH}%%" |
@@ -367,7 +367,7 @@ if [ "$PUPMODE" = "2" ]; then #from BK's quirky6.1
 	echo "$FIXEDFILES" | sed -e "s#^\.\/#\/#g" -e "s#^#\/#g" -e "s#^\/\/#\/#g" -e 's#^\/$##g' -e 's#^\/\.$##g' | sort > /root/.packages/${DLPKG_NAME}.files 
 	DIRECTSAVEPATH=/ # set it to the new cocation
 
-else #-- anything other than PUPMODE 2 (full install) --
+else #-- anything other than PUPMODE 2 or 6 (full install) --
 
 	[ "$DL_SAVE_FLAG" != "true" ] &&  rm -f $DLPKG_BASE 2>/dev/null
 	rm -f $DLPKG_MAIN.tar.${EXT} 2>/dev/null #131122
@@ -400,8 +400,6 @@ else #-- anything other than PUPMODE 2 (full install) --
 	 #now re-evaluate all the layers...
 	 busybox mount -t aufs -o remount,udba=reval unionfs / #remount with faster evaluation mode.
 	 [ $? -ne 0 ] && logger -s -t "installpkg.sh" "Failed to remount aufs / with udba=reval"
-
-	 sync
 	fi
 
 fi
@@ -418,7 +416,6 @@ do
 	[ ! -e "$DIRECTSAVEPATH/$i" ] && continue
 	cd $DIRECTSAVEPATH/
 	LANG=$LANG_USER sh ${i}
-	sync
 	rm -f ${i}
 done
 rm -rf $DIRECTSAVEPATH/install
@@ -447,6 +444,28 @@ fi
 #v424 .pet pkgs may have a post-uninstall script...
 if [ -f $DIRECTSAVEPATH/puninstall.sh ];then
  mv -f $DIRECTSAVEPATH/puninstall.sh /root/.packages/${DLPKG_NAME}.remove
+fi
+
+#Non-puppy packages stores start/stop daemon scripts to /etc/rc.d, however it was reserved for puppy core scripts. Just relocate the scripts to /etc/init.d
+
+rm -f /tmp/pkg-rcd-files 2>/dev/null
+
+if [ "$EXT" != ".pet" ]; then
+
+ #Get all files stored on /etc/rc.d and /etc/rc.d/init.d of non-puppy package
+ cat /var/packages/${DLPKG_NAME}.files | grep "^\/etc\/rc\.d\/|^\/etc\/rc\.d\/init\.d\/" > /tmp/pkg-rcd-files
+
+ while IFS= read -r line
+ do
+  rcbname="$(basename $line)"
+  #Move files to /etc/init.d
+  [ -f $line ] && mv -f "$line" /etc/init.d/$rcbname
+  [ -L $line ] && mv -f "$line" /etc/init.d/$rcbname
+ done < /tmp/pkg-rcd-files
+
+ #Update the package files list
+ sed -i -e 's#^\/etc\/rc\.d\/init\.d\/#\/etc\/init\.d\/#g' -e 's#^\/etc\/rc\.d\/#\/etc\/init\.d\/#g' /var/packages/${DLPKG_NAME}.files
+
 fi
 
 

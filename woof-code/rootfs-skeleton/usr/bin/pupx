@@ -1,9 +1,10 @@
 #!/bin/bash
 
+SCREENSAVERFLAG='yes'
+SCREENVISIBLE="enabled"
+
 if [ -n "$WAYLAND_DISPLAY" ]; then
-    . ~/.Xwaylandrc
-    SCREENSAVERFLAG='yes'
-    SCREENVISIBLE="enabled"
+    [ -f .Xwaylandrc ] && . ~/.Xwaylandrc
     if [ -n "$XWAYLAND_SCREENSAVER_DELAY" ]; then
         SCREENSAVERDELAY="$XWAYLAND_SCREENSAVER_DELAY"
     else
@@ -15,8 +16,6 @@ else
     XSETQ="`LANG=C xset q`"
 
     SCREENSAVERDELAY="`echo "$XSETQ" | grep ' timeout: ' | grep ' cycle: ' | tr -s ' ' | cut -f 3 -d ' '`"
-    SCREENSAVERFLAG='yes'
-    SCREENVISIBLE="enabled"
     if [ "$SCREENSAVERDELAY" = "0" ];then
         SCREENSAVERFLAG='no'
         SCREENVISIBLE="disabled"
@@ -71,15 +70,15 @@ MAIN_DIALOG='<window title="'$(gettext 'Screensaver settings')'" icon-name="vide
        <text><label>"       "</label></text>
        <text><label>'$(gettext 'Delay:')'</label></text>
 
-       <spinbutton range-min="0" range-max="9999" range-step="1" range-value="'${SCREENSAVERDELAY}'">
+       <spinbutton range-min="30" range-max="9999" range-step="1" range-value="'${SCREENSAVERDELAY}'">
          <variable>SCREENSAVERDELAY</variable>
          <visible>'${SCREENVISIBLE}'</visible>
        </spinbutton>
 
        <text><label>'$(gettext '(seconds)       ')'</label></text>
       </hbox>
-      <text><label>'$(gettext 'This is the delay before screensaver is activated')'</label></text>'
-
+      <text><label>'$(gettext 'This is the delay before screensaver is activated')'</label></text>
+'
 [ -z "$WAYLAND_DISPLAY" ] && MAIN_DIALOG=${MAIN_DIALOG}'
       <hbox>
        <text><label>"        "</label></text>
@@ -135,13 +134,24 @@ RETPARAMS="`gtkdialog --center --program=MAIN_DIALOG`"
 eval "$RETPARAMS"
 [ "$EXIT" != "save settings" ] && exit
 
-if [ -n "$WAYLAND_DISPLAY" ]; then
-	if [ "$SCREENSAVERFLAG" = "true" -a "$SCREENSAVERDELAY" -gt 0 ]; then
+if [ -f ~/.Xwaylandrc ]; then
+    if [ "$SCREENSAVERFLAG" = "true" -a "$SCREENSAVERDELAY" -gt 0 ]; then
         sed -i "s%^XWAYLAND_SCREENSAVER_DELAY=.*%XWAYLAND_SCREENSAVER_DELAY=$SCREENSAVERDELAY%" ~/.Xwaylandrc
+		if pidof labwc >/dev/null 2>&1 ; then # could add sway here
+			set_wl_monsleep
+			killall swayidle
+			swayidle &
+		fi
     else
         sed -i "s%^XWAYLAND_SCREENSAVER_DELAY=.*%XWAYLAND_SCREENSAVER_DELAY=%" ~/.Xwaylandrc
 	fi
     exit
+elif [ -f "$XDG_CONFIG_HOME/swayidle/config" ]; then # created by set_wl_monsleep at startup absent
+	CURDELAY=$(grep -o 'timeout [0-9]*[0-9]' $XDG_CONFIG_HOME/swayidle/config)
+	CURDELAY=${CURDELAY#*\ }
+	[ "$SCREENSAVERDELAY" -gt 0 ] && sed -i "s%$CURDELAY%$SCREENSAVERDELAY%" $XDG_CONFIG_HOME/swayidle/config
+	killall swayidle
+	swayidle &
 fi
 
 pupx_screen     z

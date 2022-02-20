@@ -100,7 +100,7 @@ loadswap_func() { #w481 made into a function.
   fi
  fi
  # if we failed to find a swap partition or file, try zram
- echo -n "Loading zram swap ..." >/dev/console
+ echo -n "Loading zram swap..." >/dev/console
  create_zram_swap
  ret=$?
  status_func $ret
@@ -112,10 +112,11 @@ loadswap_func() { #w481 made into a function.
 #================================================================
 #                         MAIN
 #================================================================
-# mount devtmpfs early
-busybox mount -t devtmpfs devtmpfs /dev 2>/dev/null
-
 . /etc/rc.d/PUPSTATE
+
+# mount devtmpfs early
+[ $PUPMODE -ne 6 ] && busybox mount -t devtmpfs devtmpfs /dev 2>/dev/null
+
 . /etc/DISTRO_SPECS
 . /etc/rc.d/BOOTCONSTRAINED # has BOOT_DISABLESWAP, BOOT_ATIME, BOOT_DIRTYWRITE.
 . /etc/rc.d/MODULESCONFIG #modules loading configuration.
@@ -124,7 +125,7 @@ busybox mount -t devtmpfs devtmpfs /dev 2>/dev/null
 [ $pdev1 ] && PDEV1=$pdev1    #boot parameter, partition have booted off. ex: hda3
 
 #if have just done a switch_root, output a 'done' message...
-[ $PUPMODE -ne 2 ] && status_func 0
+[ $PUPMODE -ne 2 -a $PUPMODE -ne 6 ] && status_func 0
 
 ORIGLANG="`grep '^LANG=' /etc/profile | cut -f 2 -d '=' | cut -f 1 -d ' '`" #120217
 ORIGLANG1="${ORIGLANG%_*}" #ex: en
@@ -146,14 +147,16 @@ STATUS=0
 
 echo -n "Making the filesystem usable..." >/dev/console
 
-# busybox mount /proc before remounting / as rw (full install)
-busybox mount -t proc none /proc 2>/dev/null; STATUS=$((STATUS+$?))
+if [ $PUPMODE -ne 6 ] ; then
+ # busybox mount /proc before remounting / as rw (full install)
+ busybox mount -t proc none /proc 2>/dev/null; STATUS=$((STATUS+$?))
+fi
 
 FREERAM=`free | grep -o 'Mem: .*' | tr -s ' ' | cut -f 4 -d ' '` #w481 110405
 QTRFREERAM=`expr $FREERAM \/ 4`
 
 #=============== full-hd-install
-if [ $PUPMODE -eq 2 ] ; then
+if [ $PUPMODE -eq 2 -o $PUPMODE -eq 6 ] ; then
  #no longer deleting /tmp/* in rc.shutdown... (note, init script in initrd.gz wipes it)
  rm -rf /tmp/*
  rm -rf /tmp/.[0-9a-zA-Z]*
@@ -266,7 +269,7 @@ if [ "$SWAPON" = "yes" ];then
 fi
 
 # Setup /mnt/home symlink before sfs_load
-rm -f /mnt/home 2>/dev/null
+[ $PUPMODE -ne 6 ] && rm -f /mnt/home 2>/dev/null
 if [ $PUPMODE -eq 2 -o $PUPMODE -eq 77 ] ; then
  PUP_HOME='/'
  ln -sv / /mnt/home
@@ -370,13 +373,26 @@ if [ ! -e /bin/udevd ] && [ ! -e /sbin/udevd ] ; then
 	fi
 fi
 
+if [ -e /lib/systemd/systemd-udevd ] ; then
+  # since systemd 246 (https://github.com/systemd/systemd/commit/6b2229c6c60d0486f5eb9ed3088f9c780d7c0233), udev doesn't create these
+  rm -f /dev/core /dev/fd /dev/stdin /dev/stdout /dev/stderr
+  ln -s /proc/kcore /dev/core
+  ln -s /proc/self/fd /dev/fd
+  ln -s /proc/self/fd/0 /dev/stdin
+  ln -s /proc/self/fd/1 /dev/stdout
+  ln -s /proc/self/fd/2 /dev/stderr
+fi
+
+#rebuild out-of-tree modules if the kernel has changed
+[ -e /usr/lib/dkms/dkms_autoinstaller ] && PATH="$PATH" /usr/lib/dkms/dkms_autoinstaller start 2>/dev/console
+
 #110502 change 'never' to 'early', fixes device nodes created with correct owner:group...
 if [ "$BOOT_UDEVDCHILDREN" ];then #120709
    udevd --daemon --resolve-names=early --children-max=${BOOT_UDEVDCHILDREN} #BOOT_UDEVDCHILDREN=1 good idea?
 else
    udevd --daemon --resolve-names=early
 fi
-sleep 0.3
+[ "$DISTRO_TARGETARCH" = "x86" ] && sleep 0.3
 
 # kernel polling - https://lwn.net/Articles/423619/
 echo 5000 > /sys/module/block/parameters/events_dfl_poll_msecs
@@ -387,7 +403,7 @@ do
  ONEPATH="`dirname $ONEMODALIAS`"
  if [ -e ${ONEPATH}/uevent ];then
   echo add > ${ONEPATH}/uevent #generates an 'add' uevent.
-  sleep 0.02
+  [ "$DISTRO_TARGETARCH" = "x86" ] && sleep 0.02
  fi
 done
 
@@ -452,7 +468,7 @@ status_func 0
 #################MISC. SYSTEM SETUP#################
 echo "MISC. SYSTEM SETUP"
 
-echo -e "${DISTRO_NAME} Linux\n`uname -s` `uname -r` [`uname -m` arch]\n\n" > /etc/issue
+echo -e "${DISTRO_NAME}\n`uname -s` `uname -r` [`uname -m` arch]\n\n" > /etc/issue
 
 # see https://www.frozentux.net/iptables-tutorial/other/ip_dynaddr.txt
 # turn on special handling of dynamic addresses - quiet mode
@@ -649,6 +665,7 @@ fi
 #start dbus-daemon
 if which dbus-daemon >/dev/null 2>&1 ; then
  if [ "$(pidof dbus-daemon)" == "" ]; then
+  rm -f /run/dbus/pid
   dbus-daemon --system
  fi
 fi

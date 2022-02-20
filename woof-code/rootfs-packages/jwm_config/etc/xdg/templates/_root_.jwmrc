@@ -187,7 +187,8 @@
 <Key mask="A" key="bracketleft">maxleft</Key>
 <Key mask="A" key="bracketright">maxright</Key>
 
-<Key mask="A" key="Tab">next</Key>
+<Key mask="A" key="Tab">nextstacked</Key>
+<Key mask="AS" key="Tab">prevstacked</Key>
 <Key mask="A" key="F4">close</Key>
 <Key mask="CA" key="Right">rdesktop</Key>
 <Key mask="CA" key="Left">ldesktop</Key>
@@ -210,6 +211,7 @@
 <Include>/root/.jwm/jwmrc-tray8</Include>
 <Include>/root/.jwm/jwmrc-corners</Include>
 <Include>/root/.jwm/jwmrc-theme</Include>
+<Include>/root/.jwm/jwmrc-wallpaper</Include>
 <Include>/root/.jwm/jwmrc-personal</Include>
 
 </JWM>

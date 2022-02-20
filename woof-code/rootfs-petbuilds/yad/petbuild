@@ -1,5 +1,5 @@
 download() {
-    [ -f yad-0.42.1.tar.gz ] || wget -t 1 -T 15 -O yad-0.42.1.tar.gz https://github.com/v1cont/yad/archive/v0.42.1.tar.gz
+    [ -f yad-0.42.1.tar.gz ] || wget -t 3 -T 60 -O yad-0.42.1.tar.gz https://github.com/v1cont/yad/archive/v0.42.1.tar.gz
 }
 
 build() {
@@ -7,7 +7,7 @@ build() {
     cd yad-0.42.1
     autoreconf -if
     intltoolize --force
-    if pkg-config --atleast-version=3.24.18 gtk+-3.0; then
+    if [ $PETBUILD_GTK -eq 3 ]; then
         ./configure --prefix=/usr --disable-pfd --with-gtk=gtk3
     else
         ./configure --prefix=/usr --disable-pfd

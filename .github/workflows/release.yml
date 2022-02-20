@@ -28,7 +28,7 @@ on:
       kernel:
         description: 'Kernel version, without .x at the end'
         required: false
-        default: '5.10'
+        default: '5.15'
       prefix:
         description: 'File name prefix'
         required: false
@@ -59,10 +59,8 @@ jobs:
         echo "dash dash/sh boolean false" | sudo debconf-set-selections
         sudo DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
         sudo ln -s bash /bin/ash
-        [ "${{ github.event.inputs.arch }}" = "x86" ] && echo -e '#!/bin/sh\nexec linux32 "$@"' | sudo tee /usr/local/bin/linuxn || echo -e '#!/bin/sh\nexec "$@"' | sudo tee /usr/local/bin/linuxn
-        sudo chmod 755 /usr/local/bin/linuxn
     - name: merge2out
-      run: yes "" | sudo -E linuxn ./merge2out woof-distro/${{ github.event.inputs.arch }}/${{ github.event.inputs.compat_distro }}/${{ github.event.inputs.compat_version }}
+      run: yes "" | sudo -E ./merge2out woof-distro/${{ github.event.inputs.arch }}/${{ github.event.inputs.compat_distro }}/${{ github.event.inputs.compat_version }}
     - name: Set version
       run: sudo sed -i s/^DISTRO_VERSION=.*/DISTRO_VERSION=${{ github.event.inputs.version }}/ ../woof-out_*/DISTRO_SPECS
     - name: Set file name prefix
@@ -70,15 +68,25 @@ jobs:
     - name: 0setup
       run: |
         cd ../woof-out_*
-        sudo -E linuxn ./0setup
+        sudo -E ./0setup
     - name: 1download
       run: |
         cd ../woof-out_*
-        sudo -E linuxn ./1download
+        sudo -E ./1download
     - name: 2createpackages
       run: |
         cd ../woof-out_*
-        echo | sudo -E linuxn ./2createpackages
+        echo | sudo -E ./2createpackages
+    - name: Choose kernel variant
+      id: choose_kernel_variant
+      run: |
+        cd ../woof-out_*
+        . _00build.conf
+        [ ! -e _00build_2.conf ] || . _00build_2.conf
+        name="kernel-kit-output-usrmerge-${{ github.event.inputs.kernel }}.x-${{ github.event.inputs.arch }}"
+        [ "$USR_SYMLINKS" = yes ] || name="kernel-kit-output-${{ github.event.inputs.kernel }}.x-${{ github.event.inputs.arch }}"
+        echo "::set-output name=artifact_name::$name"
+      shell: bash
     - name: Get cached kernel-kit output
       uses: dawidd6/action-download-artifact@v2
       with:
@@ -86,7 +94,7 @@ jobs:
         branch: testing
         workflow: kernel-kit.yml
         workflow_conclusion: success
-        name: kernel-kit-output-${{ github.event.inputs.kernel }}.x-${{ github.event.inputs.arch }}
+        name: ${{ steps.choose_kernel_variant.outputs.artifact_name }}
         path: output
     - name: Move cached kernel-kit output
       run: sudo mv output ../woof-out_*/kernel-kit/
@@ -98,11 +106,9 @@ jobs:
         restore-keys: |
           ${{ github.workflow }}-petbuild-sources-
     - name: Install 3builddistro dependencies
-      if: github.event.inputs.arch == 'x86'
       run: |
-        sudo dpkg --add-architecture i386
         sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends libuuid1:i386
+        sudo apt-get install -y --no-install-recommends patchelf debootstrap
     - name: Install cdrtools
       run: |
         [ -f local-repositories/mkisofs ] || (curl -L https://sourceforge.net/projects/cdrtools/files/alpha/cdrtools-3.02a09.tar.bz2/download | tar -xjf- && cd cdrtools-3.02 && make -j`nproc` && mv mkisofs/OBJ/x86_64-linux-cc/mkisofs ../local-repositories/mkisofs)
@@ -111,12 +117,11 @@ jobs:
       run: |
         sudo mv petbuild-sources ../woof-out_*/
         cd ../woof-out_*
-        sudo -E HOME=/root linuxn ./3builddistro release
+        sudo -E HOME=/root XDG_CONFIG_HOME=/root/.config ./3builddistro release
         sudo mv -f woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}/${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}.iso $GITHUB_WORKSPACE/
-        sudo mv -f woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}/devx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs $GITHUB_WORKSPACE/
-        sudo mv -f woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}/docx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs $GITHUB_WORKSPACE/
-        sudo mv -f woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}/nlsx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs $GITHUB_WORKSPACE/
-        sudo mv -f kernel-kit/output/kernel_sources-${{ github.event.inputs.kernel }}-kernel-kit.sfs $GITHUB_WORKSPACE/
+        sudo mv -f kernel-kit/output/kbuild-*.sfs woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}/
+        cd woof-output-${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}
+        sudo tar -f $GITHUB_WORKSPACE/${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}-extra.tar -c *{x,drv}_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs kbuild-*.sfs
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -136,41 +141,14 @@ jobs:
         asset_path: ${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}.iso
         asset_name: ${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}.iso
         asset_content_type: application/octet-stream
-    - name: Upload devx
+    - name: Upload extras
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: devx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_name: devx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_content_type: application/octet-stream
-    - name: Upload docx
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: docx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_name: docx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_content_type: application/octet-stream
-    - name: Upload nlsx
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: nlsx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_name: nlsx_${{ github.event.inputs.prefix }}_${{ github.event.inputs.version }}.sfs
-        asset_content_type: application/octet-stream
-    - name: Upload kernel sources
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: kernel_sources-${{ github.event.inputs.kernel }}-kernel-kit.sfs
-        asset_name: kernel_sources-${{ github.event.inputs.kernel }}-kernel-kit.sfs
+        asset_path: ${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}-extra.tar
+        asset_name: ${{ github.event.inputs.prefix }}-${{ github.event.inputs.version }}-extra.tar
         asset_content_type: application/octet-stream
     - name: Move cached directories
       run: sudo mv ../woof-out_*/petbuild-sources .

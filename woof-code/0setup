@@ -32,7 +32,7 @@ if [ -d ./support -a -f ./DISTRO_SPECS -a -d ./rootfs-skeleton ] ;then
   . ./PKGS_MANAGEMENT
   . ./DISTRO_PET_REPOS
   RUNNINGPUP='no'
-  [ ! -f /usr/local/petget/debdb2pupdb ] && DEBDB2PUPDB="$(pwd)/support/debdb2pupdb"
+  DEBDB2PUPDB="$(pwd)/support/debdb2pupdb"
   FIND_CAT="$(pwd)/support/find_cat"
   #note, 3builddistro copies it into rootfs-complete/usr/local/petget when building a pup.
 else
@@ -46,9 +46,6 @@ else
   cd /root/.packages
   RUNNINGPUP='yes'
 fi
-
-#remove comments from PKGS_SPECS_TABLE
-PKGS_SPECS_TABLE="`echo "$PKGS_SPECS_TABLE" | grep -v '^#'`"
 
 #======================================================================
 if [ "$1" = "" ] ; then
@@ -145,16 +142,40 @@ download_pkg_dbs compat $PKG_DOCS_DISTRO_COMPAT #---
 # -update dbs... #${DISTRO_BINARY_COMPAT}-updates package databases
 PKGLISTS_COMPAT_UPDATES=""
 case $DISTRO_BINARY_COMPAT in ubuntu|trisquel|debian|devuan) #130319 removed |raspbian
-   DBUPDATEFLAG='yes'
-   #Packages-ubuntu-precise-main -> Packages-ubuntu-precise_updates-main
-   #http://archive.ubuntu.com/ubuntu/dists/precise/main/binary-i386/Packages.bz2 -> http://archive.ubuntu.com/ubuntu/dists/precise-updates/main/binary-i386/Packages.bz2
-   PKGLISTS_COMPAT_U=$(echo "$PKG_DOCS_DISTRO_COMPAT" | tr ' ' '\n' | grep -v 'deb-multimedia' | \
-     sed -e "s|-${DISTRO_COMPAT_VERSION}-|-${DISTRO_COMPAT_VERSION}_updates-|" \
-         -e "s|/${DISTRO_COMPAT_VERSION}/|/${DISTRO_COMPAT_VERSION}-updates/|")
-   download_pkg_dbs compat $PKGLISTS_COMPAT_U
-   #see further down
-   PKGLISTS_COMPAT_UPDATES=$(echo "$PKGLISTS_COMPAT_U" | cut -f 3 -d "|" | tr '\n' ' ')
+   case $DISTRO_COMPAT_VERSION in
+   sid|ceres) ;;
+   *)
+      DBUPDATEFLAG='yes'
+      #Packages-ubuntu-precise-main -> Packages-ubuntu-precise_updates-main
+      #http://archive.ubuntu.com/ubuntu/dists/precise/main/binary-i386/Packages.bz2 -> http://archive.ubuntu.com/ubuntu/dists/precise-updates/main/binary-i386/Packages.bz2
+      PKGLISTS_COMPAT_U=$(echo "$PKG_DOCS_DISTRO_COMPAT" | tr ' ' '\n' | grep -v 'deb-multimedia' | \
+        sed -e "s|-${DISTRO_COMPAT_VERSION}-|-${DISTRO_COMPAT_VERSION}_updates-|" \
+            -e "s|/${DISTRO_COMPAT_VERSION}/|/${DISTRO_COMPAT_VERSION}-updates/|")
+      download_pkg_dbs compat $PKGLISTS_COMPAT_U
+      #see further down
+      PKGLISTS_COMPAT_UPDATES=$(echo "$PKGLISTS_COMPAT_U" | cut -f 3 -d "|" | tr '\n' ' ')
+      ;;
+   esac
 esac
+
+if [ "$DISTRO_BINARY_COMPAT" = "debian" ]; then
+  wget --spider --tries 1 -T 3 -F --max-redirect 0 http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/
+  if [ $? -eq 0 ]; then
+   PKGLISTS_COMPAT_S="z|http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/main/binary-${DBIN_ARCH}/Packages.xz|Packages-debian-${DISTRO_COMPAT_VERSION}-security-main
+z|http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/non-free/binary-${DBIN_ARCH}/Packages.xz|Packages-debian-${DISTRO_COMPAT_VERSION}-security-non-free
+z|http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/contrib/binary-${DBIN_ARCH}/Packages.xz|Packages-debian-${DISTRO_COMPAT_VERSION}-security-contrib
+"
+   download_pkg_dbs compat $PKGLISTS_COMPAT_S
+   PKGLISTS_COMPAT_UPDATES="$PKGLISTS_COMPAT_UPDATES $(echo "$PKGLISTS_COMPAT_S" | cut -f 3 -d "|" | tr '\n' ' ')"
+
+   if [ "$RUNNINGPUP" = "no" ]; then
+    cat << EOF >> $DCRFILE
+# appended by 0setup
+REPOS_DISTRO_COMPAT="$REPOS_DISTRO_COMPAT z|http://deb.debian.org/debian-security|Packages-debian-${DISTRO_COMPAT_VERSION}-*"
+EOF
+   fi
+ fi
+fi
 
 case $DISTRO_BINARY_COMPAT in slackware*) # slackware official updates = patches repo
    DBUPDATEFLAG='yes'
@@ -195,7 +216,7 @@ do
     fi
     #create an intermediate-converted file...
     #121113 added "Section"... 121113 insert STARTMARKER...
-    MANIPULATED1="$(grep -E '^Package:|^Installed\-Size:|^Architecture:|^Version:|^Depends:|^Filename:|^Description:|^Homepage:|^Section:' ${ONE_PKGLISTS_COMPAT}pre | tr '[\t"|`]' ' ' | tr -s ' ' | sed -e 's%^Installed\-Size%InstalledSize%' -e 's%^Package:%STARTMARKER|PKG\nPackage:%' -e 's%: %|%' -e 's% $%%')" #`geany
+    MANIPULATED1="$(grep -E '^Package:|^Installed\-Size:|^Architecture:|^Version:|^Pre-Depends:|^Depends:|^Filename:|^Description:|^Homepage:|^Section:' ${ONE_PKGLISTS_COMPAT}pre | tr '[\t"|`]' ' ' | tr -s ' ' | sed -e 's%^Installed\-Size%InstalledSize%' -e 's%^Package:%STARTMARKER|PKG\nPackage:%' -e 's%: %|%' -e 's% $%%')" #`geany
     #call new app. note, this in turn calls /usr/local/petget/find_pkgs...
     if [ -n "$MANIPULATED1" ];then
      echo "$MANIPULATED1" > /tmp/woof-debdb.in
@@ -285,14 +306,15 @@ if [ "$DBUPDATEFLAG" = "yes" ];then
  for ONE_PKGLISTS_COMPAT in $PKGLISTS_COMPAT
  do
   REPOFIELD="`echo -n "$ONE_PKGLISTS_COMPAT" | rev | cut -f 1 -d '-' | rev`" #ex: main
-  PKGUPDATES="`echo -n "$PKGLISTS_COMPAT_UPDATES" | tr ' ' '\n' | grep "\-${REPOFIELD}$" | head -n 1`" #ex: Packages-ubuntu-precise_updates-main
-  [ ! -f "$PKGUPDATES" ] && continue
-  cat $PKGUPDATES > /tmp/0setup_xxx1
-  cat $ONE_PKGLISTS_COMPAT >> /tmp/0setup_xxx1
-  #want to discard the older package...
-  sort --unique --field-separator='|' --key=2,2 /tmp/0setup_xxx1 > $ONE_PKGLISTS_COMPAT
-  #...assumes pkg names remain the same, ex "firefox" (2nd field in db).
-  mv -f $PKGUPDATES /tmp/$PKGUPDATES #dump -updates db file.
+  echo -n "$PKGLISTS_COMPAT_UPDATES" | tr ' ' '\n' | grep "\-${REPOFIELD}$" | while read PKGUPDATES
+  do
+   [ ! -f "$PKGUPDATES" ] && continue
+   cat $PKGUPDATES $ONE_PKGLISTS_COMPAT > /tmp/0setup_xxx1
+   #want to discard the older package...
+   sort --reverse --version-sort --field-separator='|' --key=3,3 /tmp/0setup_xxx1 | sort --stable --unique --field-separator='|' --key=2,2 > $ONE_PKGLISTS_COMPAT
+   #...assumes pkg names remain the same, ex "firefox" (2nd field in db).
+   mv -f $PKGUPDATES /tmp/$PKGUPDATES #dump -updates db file.
+  done
  done
 fi
 
@@ -307,7 +329,7 @@ if [ "$SETUPCALLEDFROM" = "ppm" ];then
 fi
 
 echo -e "\nChecking pkgs"
-support/findpkgs >/dev/null
+support/findpkgs || exit 1
 if [ -s FINDPKGS-NOT-FOUND.log ]; then
   grep 'was not found' FINDPKGS-NOT-FOUND.log  | sort -u
   exit 1

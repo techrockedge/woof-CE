@@ -1,41 +1,93 @@
 download() {
-    [ -f xwayland-21.1.1.tar.xz ] || wget -t 1 -T 15 https://xorg.freedesktop.org/archive/individual/xserver/xwayland-21.1.1.tar.xz
-    [ -f seatd-0.5.0.tar.gz ] || wget -t 1 -T 15 -O seatd-0.5.0.tar.gz https://git.sr.ht/~kennylevinsen/seatd/archive/0.5.0.tar.gz
-    [ -f wlroots-0.13.0.tar.gz ] || wget -t 1 -T 15 https://github.com/swaywm/wlroots/releases/download/0.13.0/wlroots-0.13.0.tar.gz
-    [ -f cage-0.1.3.tar.gz ] || wget -t 1 -T 15 https://github.com/Hjdskes/cage/releases/download/v0.1.3/cage-0.1.3.tar.gz
-    [ -f swayidle-1.6.tar.gz ] || wget -t 1 -T 15 https://github.com/swaywm/swayidle/releases/download/1.6/swayidle-1.6.tar.gz
+    [ -f xorgproto-2021.5.tar.gz ] || wget -t 3 -T 60 https://xorg.freedesktop.org/archive/individual/proto/xorgproto-2021.5.tar.gz
+    [ -f libxcvt-0.1.1.tar.xz ] || wget -t 3 -T 60 https://xorg.freedesktop.org/releases/individual/lib/libxcvt-0.1.1.tar.xz
+    [ -f xwayland-22.1.0.tar.xz ] || wget -t 3 -T 60 https://xorg.freedesktop.org/archive/individual/xserver/xwayland-22.1.0.tar.xz
+    [ -f seatd-0.5.0.tar.gz ] || wget -t 3 -T 60 -O seatd-0.5.0.tar.gz https://git.sr.ht/~kennylevinsen/seatd/archive/0.5.0.tar.gz
+    [ -f wayland-protocols-1.24.tar.xz ] || wget -t 3 -T 60 https://wayland.freedesktop.org/releases/wayland-protocols-1.24.tar.xz
+    [ -f wayland-1.20.0.tar.xz ] || wget -t 3 -T 60 https://wayland.freedesktop.org/releases/wayland-1.20.0.tar.xz
+    [ -f wlroots-0.15.1.tar.gz ] || wget -t 3 -T 60 https://gitlab.freedesktop.org/wlroots/wlroots/-/archive/0.15.1/wlroots-0.15.1.tar.gz
+    [ -f cage-f71844ab54dbb3192d8c2f0a1db84d50e18536d9.zip ] || wget -t 3 -T 60 -O cage-f71844ab54dbb3192d8c2f0a1db84d50e18536d9.zip https://github.com/Hjdskes/cage/archive/f71844ab54dbb3192d8c2f0a1db84d50e18536d9.zip
+    [ -f grim-1.3.2.tar.gz ] || wget -t 3 -T 60 https://github.com/emersion/grim/releases/download/v1.3.2/grim-1.3.2.tar.gz
+    [ -f swayidle-1.7.1.tar.gz ] || wget -t 3 -T 60 https://github.com/swaywm/swayidle/releases/download/1.7.1/swayidle-1.7.1.tar.gz
+    [ -f wlr-randr-v0.2.0.tar.gz ] || wget -t 3 -T 60 -O wlr-randr-v0.2.0.tar.gz https://git.sr.ht/~emersion/wlr-randr/archive/v0.2.0.tar.gz
 }
 
 build() {
-    tar -xJf xwayland-21.1.1.tar.xz
-    cd xwayland-21.1.1
-    meson --buildtype=minsize --prefix=/usr build
+    python3 -m venv /tmp/meson
+    . /tmp/meson/bin/activate
+    python3 -m pip install "meson>=0.58.1,<0.59.0"
+
+    tar -xJf libxcvt-0.1.1.tar.xz
+    cd libxcvt-0.1.1
+    patch -p1 < ../static-libxcvt.patch
+    meson --buildtype=release --prefix=/usr --default-library=static build
+    ninja -C build install
+    cd ..
+
+    tar -xzf xorgproto-2021.5.tar.gz
+    cd xorgproto-2021.5
+    meson --buildtype=release --prefix=/usr build
+    ninja -C build install
+    cd ..
+
+    tar -xJf wayland-protocols-1.24.tar.xz
+    cd wayland-protocols-1.24
+    meson --buildtype=release --prefix=/usr -Dtests=false build
+    ninja -C build install
+    cd ..
+
+    tar -xJf xwayland-22.1.0.tar.xz
+    cd xwayland-22.1.0
+    meson --buildtype=release --prefix=/usr -Ddpms=true -Ddri3=true -Dglamor=true -Dglx=true -Dmitshm=true -Dscreensaver=true -Dxvfb=false -Dxwayland_eglstream=true build
     ninja -C build install
     cd ..
 
     tar -xzf seatd-0.5.0.tar.gz
     cd seatd-0.5.0
-    meson --buildtype=minsize --prefix=/usr -Dbuiltin=enabled -Dserver=disabled -Dexamples=disabled build
+    meson --buildtype=release --prefix=/usr -Dlogind=disabled -Dbuiltin=enabled -Dserver=disabled -Dexamples=disabled build
     ninja -C build install
     cd ..
 
-    tar -xzf wlroots-0.13.0.tar.gz
-    cd wlroots-0.13.0
-    patch -p1 < ../bullseye-wayland-version.patch
-    meson --buildtype=minsize --prefix=/usr -Dxwayland=enabled -Dlibseat=enabled build
+    tar -xJf wayland-1.20.0.tar.xz
+    cd wayland-1.20.0
+    meson --buildtype=release --prefix=/usr --default-library=static -Dtests=false -Ddocumentation=false build
     ninja -C build install
     cd ..
 
-    tar -xzf cage-0.1.3.tar.gz
-    cd cage-0.1.3
-    patch -p1 < ../root.patch
-    patch -p1 < ../libinput-conf.patch
-    meson --buildtype=minsize --prefix=/usr -Dxwayland=true build
+    export PKG_CONFIG_PATH="/usr/lib/pkgconfig:$PKG_CONFIG_PATH"
+
+    tar -xzf wlroots-0.15.1.tar.gz
+    cd wlroots-0.15.1
+    patch -p1 < ../bullseye.patch
+    meson --buildtype=release --prefix=/usr --default-library=static -Dxwayland=disabled -Dbackends=drm,libinput build
     ninja -C build install
     cd ..
 
-    tar -xzf swayidle-1.6.tar.gz
-    cd swayidle-1.6
-    meson --buildtype=minsize --prefix=/usr -Dlogind=disabled -Dzsh-completions=false -Dbash-completions=false -Dfish-completions=false build
+    unzip cage-f71844ab54dbb3192d8c2f0a1db84d50e18536d9.zip
+    cd cage-f71844ab54dbb3192d8c2f0a1db84d50e18536d9
+    patch -p1 < ../cage.patch
+    meson --buildtype=release --prefix=/usr -Dxwayland=false build
     ninja -C build install
+    cd ..
+
+    tar -xzf grim-1.3.2.tar.gz
+    cd grim-1.3.2
+    meson --buildtype=release --prefix=/usr build
+    ninja -C build install
+    cd ..
+
+    tar -xzf swayidle-1.7.1.tar.gz
+    cd swayidle-1.7.1
+    patch -p1 < ../log.patch
+    meson --buildtype=release --prefix=/usr -Dlogind=disabled -Dzsh-completions=false -Dbash-completions=false -Dfish-completions=false build
+    ninja -C build install
+    cd ..
+
+    tar -xzf wlr-randr-v0.2.0.tar.gz
+    cd wlr-randr-v0.2.0
+    patch -p1 < ../right-of.patch
+    meson --buildtype=release --prefix=/usr build
+    ninja -C build install
+
+    rm -rf /usr/share/wayland-protocols /usr/share/pkgconfig /usr/share/aclocal /usr/share/wayland /usr/bin/wayland-scanner /usr/bin/cvt /usr/lib/pkgconfig /usr/include /usr/share/man/man1/cvt.1 /usr/share/doc/xorgproto
 }

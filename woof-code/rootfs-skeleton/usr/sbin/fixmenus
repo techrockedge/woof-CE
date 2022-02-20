@@ -28,6 +28,7 @@ LANG1="${LANG%_*}" #120207 ex: de
 for ONESRC in /etc/xdg/templates/_* #ex: _root_.jwmrc
 do
 	ONEDEST=${ONESRC##*/}    # basename: _root_.jwmrc
+	[ ! "$ONEDEST" = '_root_.jwmrc' ] && MENHEIGHT=''
 	if [ "$HOME" != "/root" ] ; then
 		ONEDEST=${ONEDEST//_root/$HOME} # _root.jwmrc -> /home/finn_.jwmrc
 	fi
@@ -38,18 +39,20 @@ do
 
 	[ "$MENHEIGHT" ] && MH=$MENHEIGHT || MH=24
 
+	TMPDEST=`mktemp $ONEDEST.XXXXXXXXXX`
+
 	sed "s|MENHEIGHT|$MH|" ${ONESRC} | \
 	(
 	while read ONELINE
 	do
 		case "$ONELINE" in PUPPYMENU*)
 			EXECMENU="${ONELINE#PUPPYMENU }" #remove leading PUPPYMENU
-			${EXECMENU} ${MENHEIGHT} #>> ${ONEDEST}
+			${EXECMENU} ${MENHEIGHT} #>> ${TMPDEST}
 			continue
 		esac
-		echo "$ONELINE" #>> ${ONEDEST}
+		echo "$ONELINE" #>> ${TMPDEST}
 	done
-	) > ${ONEDEST}
+	) > ${TMPDEST}
 
 	#120207 translate some strings... 120216...
 	if [ "$LANG1" != "en" ];then
@@ -61,12 +64,20 @@ do
 				#121124 ensure that all [ ] are escaped... 121125 revert... 121126 restore, plus escape '.' chars...
 				sed -i -e 's%\[%\\[%g' -e 's$\]$\\]$g' -e 's%\\\\\[%\\[%g' -e 's%\\\\\]%\\]%g' /tmp/fixmenus-translationblock
 				sed -i -e 's%\.%\\.%g' -e 's%\\\\\.%\\.%g' /tmp/fixmenus-translationblock #note: 2nd ptn gets rid of prior escape char, so there remains just one.
-				sed -i -f /tmp/fixmenus-translationblock ${ONEDEST}
+				sed -i -f /tmp/fixmenus-translationblock ${TMPDEST}
 			fi
 		fi
 	fi
 
+	mv -f ${TMPDEST} ${ONEDEST}
 done
+
+# support labwc menu iconfont
+if type labwc >/dev/null 2>&1 ;then
+	if [ -e "/usr/share/fonts/default/TTF/pupmoon.ttf" ];then # icon font
+		[ -x "/usr/sbin/iconmenu" ] && iconmenu
+	fi
+fi
 
 #w001 support for fbpanel, lxpanel, openbox, fluxbox, pekwm...
 [ `which fbpanel_menu_refresh` ] && fbpanel_menu_refresh

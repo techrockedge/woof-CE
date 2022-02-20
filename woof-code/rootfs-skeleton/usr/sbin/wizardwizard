@@ -53,11 +53,10 @@ export WizardWizard='
       <button image-position="2">
         <label>'$(gettext 'Sound')'</label>
         '"`/usr/lib/gtkdialog/xml_button-icon sound.svg huge`"'
-        <action>/usr/sbin/alsawizard &</action>
+        <action>command -v pulseaudio > /dev/null 2>&1 && pavucontrol || /usr/sbin/alsawizard &</action>
       </button>
       '$BUTTON_22'
       <button image-position="2">
-        <sensitive>'$([ -z "$WAYLAND_DISPLAY" ] && echo true || echo false)'</sensitive>
         <label>'$(gettext 'Graphics / Screen')'</label>
         '"`/usr/lib/gtkdialog/xml_button-icon graphics.svg huge`"'
         <action>/usr/sbin/xserverwizard &</action>

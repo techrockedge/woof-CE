@@ -14,8 +14,8 @@ if [ ! "$BUILDSYS" ] ; then
 fi
 
 if [ "$BUILD_DOCX" = "yes" -o "$BUILD_NLSX" = "yes" ] ; then
-	INSTALLED_PKGS=$(cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | \
-cut -f 1 -d '|' | tr ':' '\n' | sed '/^$/d' | sort -u)
+	INSTALLED_PKGS=$((echo "$PETBUILDS" | tr ' ' '\n'; cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | \
+cut -f 1 -d '|' | tr ':' '\n' | sed '/^$/d') | sort -u)
 fi
 
 if [ "$BUILD_DOCX" = "yes" ] ; then
@@ -31,8 +31,8 @@ if [ "$BUILD_DOCX" = "yes" ] ; then
 		fi
 	done
 	echo
-	sync
 	rm -f docx/pet.specs
+	[ "$USR_SYMLINKS" = "yes" ] && usrmerge docx 0
 	echo "Creating $DOCXSFS..."
 	mksquashfs docx ${DOCXSFS} ${SFSCOMP}
 fi
@@ -50,8 +50,10 @@ if [ "$BUILD_NLSX" = "yes" ] ; then
 		fi
 	done
 	echo
-	sync
 	rm -f nlsx/pet.specs
+	mkdir -p nlsx/var/local
+	touch nlsx/var/local/nlsx_loaded
+	[ "$USR_SYMLINKS" = "yes" ] && usrmerge nlsx 0
 	echo "Creating $NLSXSFS..."
 	mksquashfs nlsx ${NLSXSFS} ${SFSCOMP}
 fi
