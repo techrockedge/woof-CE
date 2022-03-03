@@ -1,5 +1,15 @@
 #!/bin/sh -e
 
+. ../DISTRO_SPECS
+. ../_00build.conf
+[ ! -e ../_00build_2.conf ] || . ../_00build_2.conf
+
+PETS=`cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 2,5 -d \| | grep -v ^compat\| | cut -f 2 -d \| | tr '\n' ' '`
+if [ -n "$PETS" ]; then
+	echo "Cannot build bdrv, using pet packages: $PETS"
+	exit 0
+fi
+
 debootstrap=`command -v debootstrap || :`
 if [ -z "$debootstrap" ]; then
 	echo "WARNING: debootstrap is missing"
@@ -7,25 +17,28 @@ if [ -z "$debootstrap" ]; then
 	exit 0
 fi
 
-. ../DISTRO_SPECS
-. ../_00build.conf
-[ ! -e ../_00build_2.conf ] || . ../_00build_2.conf
-
 case "$DISTRO_TARGETARCH" in
 x86_64) ARCH=amd64 ;;
 x86) ARCH=i386  ;;
 arm) ARCH=armhf ;;
 arm64) ARCH=aarch64 ;;
+*) exit 1 ;;
+esac
+
+case "$DISTRO_BINARY_COMPAT" in
+debian) MIRROR=http://deb.debian.org/debian ;;
+ubuntu) MIRROR=http://archive.ubuntu.com/ubuntu ;;
+*) exit 1 ;;
 esac
 
 export LD_LIBRARY_PATH=
 export DEBIAN_FRONTEND=noninteractive
 
-# create a tiny Debian installation
+# create a tiny installation of the compatible distro
 if [ "$USR_SYMLINKS" = "yes" ]; then
-	$debootstrap --arch=$ARCH --variant=minbase ${DISTRO_COMPAT_VERSION} bdrv http://deb.debian.org/debian
+	$debootstrap --arch=$ARCH --variant=minbase ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
 else
-	$debootstrap --no-merged-usr --arch=$ARCH --variant=minbase ${DISTRO_COMPAT_VERSION} bdrv http://deb.debian.org/debian
+	$debootstrap --no-merged-usr --arch=$ARCH --variant=minbase ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
 fi
 
 # make sure UIDs and GIDs are consistent with Puppy
@@ -33,33 +46,56 @@ cat rootfs-complete/etc/group > bdrv/etc/group
 cat rootfs-complete/etc/passwd > bdrv/etc/passwd
 cat rootfs-complete/etc/shadow > bdrv/etc/shadow
 
-# blacklist packages that may conflict with packages in the main SFS
-chroot bdrv apt-mark hold busybox
-chroot bdrv apt-mark hold busybox-static
-
 mount --bind /etc/resolv.conf bdrv/etc/resolv.conf
 trap "umount -l bdrv/etc/resolv.conf" INT ERR
 
 # configure the package manager
-echo "deb http://deb.debian.org/debian ${DISTRO_COMPAT_VERSION} main contrib non-free" > bdrv/etc/apt/sources.list
-if [ "$DISTRO_COMPAT_VERSION" != "sid" ]; then
-	cat << EOF >> bdrv/etc/apt/sources.list
-deb http://deb.debian.org/debian ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
-deb http://deb.debian.org/debian-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free
+case "$DISTRO_BINARY_COMPAT" in
+debian)
+	echo "deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free" > bdrv/etc/apt/sources.list
+
+	if [ "$DISTRO_COMPAT_VERSION" != "sid" ]; then
+		cat << EOF >> bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
+deb ${MIRROR}-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free
 EOF
-fi
+	fi
+	;;
+
+ubuntu)
+	echo "deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main universe multiverse restricted" > bdrv/etc/apt/sources.list
+
+	if [ "$DISTRO_COMPAT_VERSION" != "devel" ]; then
+		cat << EOF >> bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main universe multiverse restricted
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-security main universe multiverse restricted
+EOF
+	fi
+
+	# the x86 repo is small, contains popular packages like Steam and won't make apt update 2x slower
+	[ "$ARCH" != "amd64" ] || chroot bdrv dpkg --add-architecture i386
+	;;
+esac
 cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
 APT::Install-Recommends "false";
 APT::Install-Suggests "false";
 EOF
 chroot bdrv apt-get update
 
+# blacklist packages that may conflict with packages in the main SFS
+chroot bdrv apt-mark hold busybox
+chroot bdrv apt-mark hold busybox-static
+
+# snap is broken without systemd
+chroot bdrv apt-mark hold snapd
+
 # install all packages included in the woof-CE build
 chroot bdrv apt-get install -y `cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 5 -d \| | tr '\n' ' '`
 
-# add Synaptic
-chroot bdrv apt-get install -y synaptic
+# add missing package recommendations, Synaptic and gdebi
+chroot bdrv apt-get install -y command-not-found synaptic gdebi
 sed -e 's/^Categories=.*/Categories=X-Setup-puppy/' -i bdrv/usr/share/applications/synaptic.desktop
+echo "NoDisplay=true" >> bdrv/usr/share/applications/gdebi.desktop
 
 umount -l bdrv/etc/resolv.conf
 
@@ -96,11 +132,58 @@ cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSIO
 	LIST=bdrv/var/lib/dpkg/info/$NAME:$ARCH.list
 	[ -f "$LIST" ] || LIST=bdrv/var/lib/dpkg/info/$NAME.list
 
+	sort -r $LIST > /tmp/$NAME-sorted.list
+
 	while read FILE; do
 		[ -d "bdrv/$FILE" ] || rm -f "bdrv/$FILE" 2>/dev/null
-	done < $LIST
+	done < /tmp/$NAME-sorted.list
 
 	while read FILE; do
 		[ ! -d "bdrv/$FILE" ] || rmdir "bdrv/$FILE" 2>/dev/null || :
-	done < $LIST
+	done < /tmp/$NAME-sorted.list
+
+	rm -f /tmp/$NAME-sorted.list
 done
+
+# open .deb files with gdebi
+if [ -e rootfs-complete/usr/local/bin/rox ]; then
+	mkdir -p bdrv/etc/xdg/rox.sourceforge.net/MIME-types
+	for MIMETYPE in application_x-deb application_vnd.debian.binary-package; do
+		cat << EOF > bdrv/etc/xdg/rox.sourceforge.net/MIME-types/$MIMETYPE
+#!/bin/sh
+exec gdebi-gtk "\$1"
+EOF
+		chmod 755 bdrv/etc/xdg/rox.sourceforge.net/MIME-types/$MIMETYPE
+	done
+fi
+for DESKTOP in gpkgdialog.desktop Xpkgdialog.desktop pkgdialog.desktop petget.desktop; do
+	[ -e rootfs-complete/usr/share/applications/$DESKTOP ] || continue
+	(
+		while read LINE; do
+			case "$LINE" in
+			MimeType=*) echo "MimeType=`echo "$LINE" | cut -f 2 -d = | tr ';' '\n' | grep -v deb | grep -v -E '^$' | tr '\n' ';'`" ;;
+			*) echo "$LINE" ;;
+			esac
+		done < rootfs-complete/usr/share/applications/$DESKTOP
+	) > bdrv/usr/share/applications/$DESKTOP
+done
+if [ -e rootfs-complete/usr/share/applications/mimeapps.list ]; then
+	(
+		while read LINE; do
+			case "$LINE" in
+			*deb*=*) echo "${LINE%=*}=gdebi.desktop" ;;
+			*) echo "$LINE" ;;
+			esac
+		done < rootfs-complete/usr/share/applications/mimeapps.list
+	) > bdrv/usr/share/applications/mimeapps.list
+fi
+
+# move large directories to docx and nlsx
+mkdir -p bdrv_NLS/usr/share bdrv_DOC/usr/share
+mv bdrv/usr/share/locale bdrv_NLS/usr/share/
+mv bdrv/usr/share/doc bdrv/usr/share/info bdrv/usr/share/man bdrv_DOC/usr/share/
+if [ -d bdrv/usr/share/gnome/help ]; then
+	mkdir -p bdrv_DOC/usr/share/gnome
+	mv bdrv/usr/share/gnome/help bdrv_DOC/usr/share/gnome/
+	rmdir bdrv/usr/share/gnome 2>/dev/null
+fi

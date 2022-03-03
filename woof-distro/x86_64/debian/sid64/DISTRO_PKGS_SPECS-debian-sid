@@ -66,6 +66,7 @@ yes|bluez|bluez,bluez-obexd|exe,dev,doc,nls||deps:yes
 no|boehm-gc|libgc1,libgc-dev|exe,dev,doc,nls||deps:yes
 no|busybox||exe
 yes|bzip2|bzip2,libbz2-1.0|exe,dev,doc,nls||deps:yes
+yes|breeze-cursor-theme|breeze-cursor-theme|exe,dev,doc,nls||deps:yes
 yes|brightnessctl|brightnessctl|exe,dev,doc,nls||deps:yes
 yes|ca-certificates|ca-certificates|exe,dev,doc,nls||deps:yes
 yes|cairo|libcairo2,libcairo2-dev,libcairo-gobject2,libcairo-gobject2,libcairo-script-interpreter2|exe,dev,doc,nls||deps:yes
@@ -250,7 +251,7 @@ no|inkscapelite||exe,dev,doc,nls
 no|inotify-tools|inotify-tools,libinotifytools0|exe,dev,doc,nls
 yes|installwatch|checkinstall|exe>dev,dev,doc,nls||deps:yes
 yes|intltool|intltool|exe>dev,dev,doc,nls||deps:yes #previously only in devx, but need in main f.s. to run momanager without devx.
-yes|iptables|iptables,libip4tc2,libip6tc2,libxtables12,libnftnl11|exe,dev,doc,nls||deps:yes
+yes|iptables|iptables,libip4tc2,libip6tc2,libxtables12,libnftnl11|exe,dev>exe,doc,nls||deps:yes
 no|iso-codes|iso-codes|exe,dev,doc,nls #needed by gstreamer. very big. GSTREAMER1.0 GSTREAMER0.10
 no|isomaster|isomaster|exe,dev,doc,nls
 yes|iw|iw|exe,dev,doc,nls||deps:yes
@@ -440,7 +441,7 @@ yes|libzstd|libzstd1|exe,dev,doc,nls||deps:yes
 no|linux_firmware_dvb||exe
 yes|linux-header|linux-libc-dev|exe>dev,dev,doc,nls||deps:yes
 no|lirc|liblircclient0,liblircclient-dev|exe,dev,doc,nls
-yes|llvm|libllvm11|exe,dev||deps:yes #needed by libgl1-mesa-dri, but huge 7MB deb. i left out dev components. 120605 removed. 120902 back.
+no|llvm|libllvm11|exe,dev||deps:yes #needed by libgl1-mesa-dri, but huge 7MB deb. i left out dev components. 120605 removed. 120902 back.
 yes|login|login|exe>null,dev>null,doc>null,nls>null
 yes|lsb-base|lsb-base|exe,dev,doc,nls||deps:yes
 no|lxrandr||exe,dev,doc,nls
@@ -663,7 +664,7 @@ no|xfdiff-cut||exe
 no|xlock_gui||exe
 no|xlockmore||exe
 yes|xml-core|xml-core|exe>dev,dev,doc,nls||deps:yes
-yes|xorg_base_new|libglapi-mesa,libx11-xcb1,xfonts-utils,mesa-common-dev,libgl1,libgl1-mesa-dri,x11-xkb-utils,x11-xserver-utils,x11-utils,x11-apps,fontconfig,fontconfig-config,libfontconfig-dev,libdrm2,libdrm-common,libdrm-dev,libdrm-radeon1,libdrm-amdgpu1,libdrm-nouveau2,libdrm-intel1,libepoxy0,libepoxy-dev,libfontconfig1,libfontconfig1-dev,libfontenc1,libfontenc-dev,libgl-dev,libglvnd-dev,libglu1-mesa,libglu1-mesa-dev,libice6,libice-dev,libsm6,libsm-dev,libunwind8,libunwind-dev,libx11-6,libx11-dev,libx11-data,libxau6,libxau-dev,libxaw7,libxcomposite1,libxcomposite-dev,libxcursor1,libxcursor-dev,libxdamage1,libxdamage-dev,libxdmcp6,libxdmcp-dev,libxext6,libxext-dev,libxfixes3,libxfixes-dev,libxfont2,libxfont-dev,libxft2,libxft-dev,libxi6,libxi-dev,libxinerama1,libxkbfile1,libxkbfile-dev,libxmu6,libxmu-dev,libxmuu1,libxpm4,libxpm-dev,libxrandr2,libxrandr-dev,libxrender1,libxrender-dev,libxt6,libxt-dev,libxtst6,libxtst-dev,libxv1,libxxf86dga1,libxxf86vm1,xkb-data,xinput,xbitmaps,xauth,x11-common|exe,dev,doc,nls||deps:yes
+yes|xorg_base_new|libglapi-mesa,libx11-xcb1,xfonts-utils,mesa-common-dev,libgl1,x11-xkb-utils,x11-xserver-utils,x11-utils,x11-apps,fontconfig,fontconfig-config,libfontconfig-dev,libdrm2,libdrm-common,libdrm-dev,libdrm-radeon1,libdrm-amdgpu1,libdrm-nouveau2,libdrm-intel1,libepoxy0,libepoxy-dev,libfontconfig1,libfontconfig1-dev,libfontenc1,libfontenc-dev,libgl-dev,libglvnd-dev,libglu1-mesa,libglu1-mesa-dev,libice6,libice-dev,libsm6,libsm-dev,libunwind8,libunwind-dev,libx11-6,libx11-dev,libx11-data,libxau6,libxau-dev,libxaw7,libxcomposite1,libxcomposite-dev,libxcursor1,libxcursor-dev,libxdamage1,libxdamage-dev,libxdmcp6,libxdmcp-dev,libxext6,libxext-dev,libxfixes3,libxfixes-dev,libxfont2,libxfont-dev,libxft2,libxft-dev,libxi6,libxi-dev,libxinerama1,libxkbfile1,libxkbfile-dev,libxmu6,libxmu-dev,libxmuu1,libxpm4,libxpm-dev,libxrandr2,libxrandr-dev,libxrender1,libxrender-dev,libxt6,libxt-dev,libxtst6,libxtst-dev,libxv1,libxxf86dga1,libxxf86vm1,xkb-data,xinput,xbitmaps,xauth,x11-common|exe,dev,doc,nls||deps:yes
 yes|xorg_dri|libgl1-mesa-dri,mesa-utils,libglew2.2,libsensors5|exe,dev,doc,nls||deps:yes
 no|xserver_xorg|xserver-xorg,xserver-xorg-video-all,xserver-xorg-input-all,xserver-xorg-input-wacom,xserver-xorg-video-intel,xserver-xorg-video-qxl,xinit|exe,dev,doc,nls||deps:yes
 no|xsane||exe

@@ -68,7 +68,7 @@ rm -rf sandbox3/rootfs-complete
 rm -rf sandbox3/devx
 rm -rf sandbox3/docx ${DOCXSFS}
 rm -rf sandbox3/nlsx ${NLSXSFS}
-rm -rf sandbox3/bdrv sandbox3/adrv sandbox3/ydrv sandbox3/fdrv
+rm -rf sandbox3/bdrv sandbox3/bdrv_NLS sandbox3/bdrv_DOC sandbox3/adrv sandbox3/ydrv sandbox3/fdrv
 mkdir -p sandbox3/rootfs-complete/etc
 mkdir -p sandbox3/devx
 cp DISTRO_SPECS sandbox3/rootfs-complete/etc/
@@ -308,6 +308,9 @@ fi
 
 echo "removing obsolete libtool *.la files"
 find sandbox3/rootfs-complete/ sandbox3/devx/ -type f -name "*.la" -delete # delete old libtool files
+
+# set EXTRA_PROCESSING in _00build.conf to perform any processing required - e.g. for devx
+[ -n "$EXTRA_PROCESSING" ] && . $EXTRA_PROCESSING
 
 CROSSBUILD=0
 QEMU=
@@ -897,6 +900,7 @@ fi
 if [ "$FRUGALIFY" ]; then
 	echo "PUPMODE='6'" > rootfs-complete/etc/rc.d/PUPSTATE
 	echo "PUNIONFS='overlay'" >> rootfs-complete/etc/rc.d/PUPSTATE
+	echo "PUP_HOME=''" >> rootfs-complete/etc/rc.d/PUPSTATE
 fi
 
 if grep -q '^spot:' rootfs-complete/etc/passwd ; then
@@ -976,11 +980,14 @@ if [ "$BUILD_SFS" = 'yes' ]; then
 	sh $MWD/support/files2delete.sh rootfs-complete
 	[ "$USR_SYMLINKS" = "yes" ] && usrmerge rootfs-complete 1
 
-	if [ "${DISTRO_BINARY_COMPAT}" = 'debian' -a "$BUILD_BDRV" = 'yes' ]; then
-		if [ "$ISOFLAG" -o "$FRUGALIFY" ]; then
-			echo "Now building sandbox3/bdrv"
-			$MWD/support/bdrv.sh || exit 1
-		fi
+	if [ "$BUILD_BDRV" = 'yes' ]; then
+		case $DISTRO_BINARY_COMPAT in debian|ubuntu)
+			if [ "$ISOFLAG" -o "$FRUGALIFY" ]; then
+				echo "Now building sandbox3/bdrv"
+				$MWD/support/bdrv.sh || exit 1
+			fi
+			;;
+		esac
 	fi
 
 	#build the rootfs-complete sfs...
@@ -1085,7 +1092,6 @@ if [ "$BUILD_DEVX" = "yes" ] ; then
 
 	echo "Now creating ${DEVXSFS} ..."
 	mksquashfs sandbox3/devx ./sandbox3/${DEVXSFS} ${SFSCOMP} #100911 110713
-	[ -n "$GITHUB_ACTIONS" ] && rm -rf sandbox3/devx
 	chmod 644 ./sandbox3/${DEVXSFS}
 	echo "...done"
 
