@@ -60,6 +60,11 @@ deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
 deb ${MIRROR}-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free
 EOF
 	fi
+
+	cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
+APT::Install-Recommends "false";
+APT::Install-Suggests "false";
+EOF
 	;;
 
 ubuntu)
@@ -76,11 +81,8 @@ EOF
 	[ "$ARCH" != "amd64" ] || chroot bdrv dpkg --add-architecture i386
 	;;
 esac
-cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
-APT::Install-Recommends "false";
-APT::Install-Suggests "false";
-EOF
 chroot bdrv apt-get update
+chroot bdrv apt-get upgrade -y
 
 # blacklist packages that may conflict with packages in the main SFS
 chroot bdrv apt-mark hold busybox
@@ -89,11 +91,19 @@ chroot bdrv apt-mark hold busybox-static
 # snap is broken without systemd
 chroot bdrv apt-mark hold snapd
 
-# install all packages included in the woof-CE build
-chroot bdrv apt-get install -y `cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 5 -d \| | tr '\n' ' '`
+# install all packages that didn't get fully redirected to devx
+PKGS=`cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 1,5 -d \| |
+while IFS=\| read GENERICNAME NAME; do
+	case "$NAME" in
+	*-dev|*-dev-bin|*-devtools|*-headers) continue ;;
+	esac
+
+	[ -d ../packages-${DISTRO_FILE_PREFIX}/${GENERICNAME//:}_DEV -a ! -e ../packages-${DISTRO_FILE_PREFIX}/${GENERICNAME//:} ] || echo "$NAME"
+done`
+chroot bdrv apt-get install -y --no-install-recommends $PKGS
 
 # add missing package recommendations, Synaptic and gdebi
-chroot bdrv apt-get install -y command-not-found synaptic gdebi
+chroot bdrv apt-get install -y --no-install-recommends command-not-found synaptic gdebi
 sed -e 's/^Categories=.*/Categories=X-Setup-puppy/' -i bdrv/usr/share/applications/synaptic.desktop
 echo "NoDisplay=true" >> bdrv/usr/share/applications/gdebi.desktop
 
@@ -120,6 +130,10 @@ find bdrv | tac | while read FILE; do
 	RELPATH=${FILE#bdrv/}
 	[ -e "rootfs-complete/$RELPATH" ] || continue
 
+	case "$RELPATH" in
+	etc/group|etc/passwd|etc/shadow) continue ;;
+	esac
+
 	if [ -L "bdrv/$RELPATH" -o -f "bdrv/$RELPATH" ]; then
 		rm -f "bdrv/$RELPATH"
 	elif [ -d "bdrv/$RELPATH" ]; then
@@ -131,6 +145,7 @@ done
 cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 5 -d \| | while read NAME; do
 	LIST=bdrv/var/lib/dpkg/info/$NAME:$ARCH.list
 	[ -f "$LIST" ] || LIST=bdrv/var/lib/dpkg/info/$NAME.list
+	[ -f "$LIST" ] || continue
 
 	sort -r $LIST > /tmp/$NAME-sorted.list
 
@@ -144,6 +159,12 @@ cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSIO
 
 	rm -f /tmp/$NAME-sorted.list
 done
+
+# impersonate the distro we're compatible with, so tools like software-properties-gtk work
+mkdir -p bdrv/usr/lib
+sed "s/^ID=.*/ID=${DISTRO_BINARY_COMPAT}/" rootfs-complete/usr/lib/os-release > bdrv/usr/lib/os-release
+echo "VERSION_CODENAME=${DISTRO_COMPAT_VERSION}" >> bdrv/usr/lib/os-release
+chmod 644 bdrv/usr/lib/os-release
 
 # open .deb files with gdebi
 if [ -e rootfs-complete/usr/local/bin/rox ]; then

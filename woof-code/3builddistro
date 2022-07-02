@@ -26,6 +26,7 @@ for i in $@ ; do
 			BUILD_DOCX=yes
 			BUILD_NLSX=yes
 			BUILD_BDRV=yes
+			ADD_KBUILD=yes
 			;;
 	esac
 done
@@ -155,18 +156,6 @@ and edit it to include your customised package list.
 		change_kernels)
 			state=false
 			[ "$DISTRO_KERNEL_PET" = 'Huge_Kernel' -a "$ISOFLAG" ] && state=true
-			;;
-		simple_installer)
-			state=false
-			case $WOOF_TARGETARCH in
-			x86*) [ ! "$ISOFLAG" ] && state=true ;;
-			esac
-			;;
-		simple_updater)
-			state=false
-			case $WOOF_TARGETARCH in
-			x86*) [ -z "$ISOFLAG" -a -n "$GITHUB_REPOSITORY" ] && state=true ;;
-			esac
 			;;
 		*)
 			state=true
@@ -525,7 +514,8 @@ if [ -n "$PROMPT" ]; then
 fi
 
 echo "Now setting /etc/os-release file"
-cat > etc/os-release << _EOF
+mkdir -p usr/lib
+cat > usr/lib/os-release << _EOF
 NAME=Puppy
 VERSION="$DISTRO_VERSION"
 ID=puppy_$DISTRO_FILE_PREFIX
@@ -537,6 +527,8 @@ HOME_URL="http://puppylinux.com/"
 SUPPORT_URL="http://www.murga-linux.com/puppy/index.php"
 BUG_REPORT_URL="https://github.com/puppylinux-woof-CE/woof-CE"
 _EOF
+rm -f etc/os-release
+ln -s ../usr/lib/os-release etc/
 
 cd $WKGDIR
 
@@ -714,9 +706,6 @@ if [ ! "$ISOFLAG" ]; then
 		      rootfs-complete/usr/share/applications/Resize-personal-storage-file.desktop \
 		      rootfs-skeleton/usr/sbin/pupsave-backup \
 		      rootfs-complete/usr/share/applications/Pupsave-hot-backup.desktop
-	fi
-	if [ "$FRUGALIFY" ]; then
-		rm -f rootfs-complete/usr/share/applications/SFS-Load.desktop
 	fi
 fi
 
@@ -897,11 +886,8 @@ if [ "$SDFLAG" != "" -o "$CROSFLAG" != "" ];then
 	echo "BOOT_BOARD='${BOOT_BOARD}'" >> rootfs-complete/etc/rc.d/BOOTCONSTRAINED #120714 read by quicksetup.
 fi
 
-if [ "$FRUGALIFY" ]; then
-	echo "PUPMODE='6'" > rootfs-complete/etc/rc.d/PUPSTATE
-	echo "PUNIONFS='overlay'" >> rootfs-complete/etc/rc.d/PUPSTATE
-	echo "PUP_HOME=''" >> rootfs-complete/etc/rc.d/PUPSTATE
-fi
+# users shouldn't be able to read files under another home directory - i.e. leak .netrc
+busybox chmod 700 rootfs-complete/root rootfs-complete/home/spot
 
 if grep -q '^spot:' rootfs-complete/etc/passwd ; then
 	echo "Setting ownership of /home/spot"
@@ -982,7 +968,7 @@ if [ "$BUILD_SFS" = 'yes' ]; then
 
 	if [ "$BUILD_BDRV" = 'yes' ]; then
 		case $DISTRO_BINARY_COMPAT in debian|ubuntu)
-			if [ "$ISOFLAG" -o "$FRUGALIFY" ]; then
+			if [ "$ISOFLAG" ]; then
 				echo "Now building sandbox3/bdrv"
 				$MWD/support/bdrv.sh || exit 1
 			fi
@@ -1008,6 +994,8 @@ if [ "$BUILD_SFS" = 'yes' ]; then
 			esac
 			echo -e "\nNow building the $SYS_SFS f.s., $TYPE_SYS_SFS ..."
 			rm -f build/${TYPE_SYS_SFS} 2>/dev/null
+			[ -d ${SYS_SFS}/root ] && busybox chmod 700 ${SYS_SFS}/root
+			[ -d ${SYS_SFS}/home/spot ] && busybox chmod 700 ${SYS_SFS}/home/spot
 			mksquashfs $SYS_SFS build/${TYPE_SYS_SFS} ${SFSCOMP} #170330
 			[ -n "$GITHUB_ACTIONS" ] && rm -rf $SYS_SFS
 		done
@@ -1091,6 +1079,8 @@ if [ "$BUILD_DEVX" = "yes" ] ; then
 	done
 
 	echo "Now creating ${DEVXSFS} ..."
+	[ -d sandbox3/devx/root ] && busybox chmod 700 sandbox3/devx/root
+	[ -d sandbox3/devx/home/spot ] && busybox chmod 700 sandbox3/devx/home/spot
 	mksquashfs sandbox3/devx ./sandbox3/${DEVXSFS} ${SFSCOMP} #100911 110713
 	chmod 644 ./sandbox3/${DEVXSFS}
 	echo "...done"
@@ -1128,15 +1118,15 @@ if [ "$SDFLAG" = "" -a "$CROSFLAG" = "" ] ; then #120506
 			mv -f ${NLSXSFS} ../${WOOF_OUTPUT}/
 			( cd ../${WOOF_OUTPUT} ; md5sum ${NLSXSFS} > ${NLSXSFS}.md5.txt )
 		fi
-		if [ -f build/${BDRVSFS} ] ; then
-			mv -f build/${BDRVSFS} ../${WOOF_OUTPUT}/
-			( cd ../${WOOF_OUTPUT} ; md5sum ${BDRVSFS} > ${BDRVSFS}.md5.txt )
+		if [ "$ADD_KBUILD" = "yes" ]; then
+			KBUILDSFS="`ls ../kernel-kit/output/kbuild-*.sfs 2>/dev/null`"
+			[ -n "${KBUILDSFS}" ] && cp -f ${KBUILDSFS} ./build/
 		fi
 
 		echo "Running ../support/mk_iso.sh"
 		../support/mk_iso.sh || exit 1
 	else
-		[ "$BUILD_DEVX" = "yes" -a -f ${DEVXSFS} ] && mv -f ${DEVXSFS} ./build/
+		[ "$BUILD_DEVX" = "yes" -a -f ${DEVXSFS} -a ! -f build/${BDRVSFS} ] && mv -f ${DEVXSFS} ./build/
 		[ -f ${DOCXSFS} ] && mv -f ${DOCXSFS} ./build/
 		[ -f ${NLSXSFS} ] && mv -f ${NLSXSFS} ./build/
 		KBUILDSFS="`ls ../kernel-kit/output/kbuild-*.sfs 2>/dev/null`"

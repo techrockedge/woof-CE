@@ -48,13 +48,20 @@ eval `dbus-launch --exit-with-x11 --sh-syntax`
 run-as-spot dbus-launch --exit-with-x11 > /tmp/.spot-session-bus
 
 # start PipeWire/PulseAudio over the session bus and use it for both root and spot, so they see the same output devices
-if [ -e /usr/bin/wireplumber ]; then
+if [ -e /usr/bin/wireplumber ] || [ -e /usr/bin/pipewire-media-session ]; then
     rm -f /tmp/runtime-spot/pipewire-0
     run-as-spot pipewire &
     (
         while [ ! -e /tmp/runtime-spot/pipewire-0 ]; do sleep 0.1; done
+	
         run-as-spot pipewire-pulse &
-        run-as-spot wireplumber &
+	
+	if [ -e /usr/bin/wireplumber ]; then
+         run-as-spot wireplumber &
+	else
+	 run-as-spot pipewire-media-session &
+	fi
+    
     ) &
     export PULSE_SERVER=unix:/tmp/runtime-spot/pulse/native
     export PULSE_COOKIE=/home/spot/.config/pulse/cookie
@@ -152,11 +159,6 @@ case $desktop in
 	fi
 	;;
 esac
-
-# hack for Xwayland: for some reason, Xft.dpi is empty if .Xresources is loaded earlier
-if [ -n "$WAYLAND_DISPLAY" -a -f $userresources ]; then
-    xrdb -merge -nocpp $userresources
-fi
 
 /sbin/pup_event_frontend_d & #130525 moved down.
 

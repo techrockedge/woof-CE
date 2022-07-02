@@ -146,6 +146,14 @@ set_theme (){
 	XPID=$!
 	
 	LANG=C
+
+	cat << EOF > $HOME/.pthemerc
+PTHEME_GTK="$PTHEME_GTK"
+PTHEME_ICONS_GTK="$PTHEME_ICONS_GTK"
+PTHEME_YAMBAR_COLOR="$PTHEME_YAMBAR_COLOR"
+PTHEME_FUZZEL="$PTHEME_FUZZEL"
+EOF
+
 	#icons
 	if [ "$PTHEME_ICONS" ] && [ -d /usr/local/lib/X11/themes/"$PTHEME_ICONS" ]; then
 		icon_switcher -a "$PTHEME_ICONS"
@@ -203,6 +211,7 @@ set_theme (){
 	if [ "$PTHEME_MOUSE" ]; then
 		pcur -u -t "$PTHEME_MOUSE"
 		SWITCH_THEME=true
+		pidof labwc >/dev/null 2>&1 && . /etc/rc.d/wl_func && func_labwc "$PTHEME_MOUSE"
 	fi
 	#wallpaper
 	if [ "$PTHEME_WALL" ] && [ -f "/usr/share/backgrounds/$PTHEME_WALL" ]; then
@@ -223,7 +232,7 @@ set_theme (){
 		UPDATE_JWM=true
 		SWITCH_THEME=true
 	fi
-	if [ "$PTHEME_JWM_BUTTONS" ] && [ -d /usr/share/jwm/themes_window_buttons/"$PTHEME_JWM_BUTTONS" ]; then
+	if [ "$PTHEME_JWM_BUTTONS" ] && [ "$PTHEME_JWM_BUTTONS" = "default" -o -d /usr/share/jwm/themes_window_buttons/"$PTHEME_JWM_BUTTONS" ]; then
 		/usr/local/jwm_config/window_buttons -a "$PTHEME_JWM_BUTTONS"
 		UPDATE_JWM=true
 		SWITCH_THEME=true
@@ -413,6 +422,13 @@ echo -n > $WORKDIR/ptheme-mouse
 echo -n > $WORKDIR/ptheme-gtkdialog
 echo -n > $WORKDIR/ptheme-pwidgets_profile
 echo -n > $WORKDIR/ptheme-pwidgets_theme
+
+# link cursor themes in /usr/share/icons to $HOME
+while read -r ITHEME; do
+	ETHEME="${ITHEME/\/cursors/}"
+	XTHEME="${ETHEME##*\/}"
+	[ -e "$HOME/.icons/$XTHEME" ] || ln -sv "$ETHEME" $HOME/.icons
+done <<<$(find /usr/share/icons/ -maxdepth 2 -type d -name 'cursors')
 
 build_menus
 
@@ -650,8 +666,7 @@ S='
 
 ##  R O X   P I N
 
-   #[ "`grep -Fi 'rox' <<< $(ps -eo pid,command)`" ] &&
-    S=$S'
+   [ "`grep -Fi 'rox' <<< $(ps -eo pid,command)`" ] && S=$S'
    <hbox space-expand="true" space-fill="true">
     <menubar space-expand="true" space-fill="true">
       <menu label="'$(gettext 'Icons desktop arrangement (apps)')'" stock="gtk-go-down">

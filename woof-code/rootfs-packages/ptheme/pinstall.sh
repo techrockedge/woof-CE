@@ -38,6 +38,13 @@ echo "that you can specify in build.conf: PTHEME=<theme>"
 
 . usr/share/ptheme/globals/"${theme}"
 
+cat << EOF > root/.pthemerc
+PTHEME_GTK="$PTHEME_GTK"
+PTHEME_ICONS_GTK="$PTHEME_ICONS_GTK"
+PTHEME_YAMBAR_COLOR="$PTHEME_YAMBAR_COLOR"
+PTHEME_FUZZEL="$PTHEME_FUZZEL"
+EOF
+
 ##### JWM
 [ ! -d root/.jwm ] && mkdir -p root/.jwm
 cp -af usr/share/jwm/themes/"${PTHEME_JWM_COLOR}-jwmrc" root/.jwm/jwmrc-theme
@@ -81,17 +88,21 @@ esac
 echo "jwm size: ${PTHEME_JWM_SIZE}"
 
 mkdir -p root/.jwm/window_buttons
-Dir=usr/share/jwm/themes_window_buttons/${PTHEME_JWM_BUTTONS}
-for icon in $Dir/*; do
-    ifile=$(basename $icon)
-    ext=${ifile##*.}
-    newicon=`echo $ifile|sed "s%${ext}$%png%"`
-    if [ "`which rsvg-convert`" ]; then
-        rsvg-convert -w 48 -h 48 -o root/.jwm/window_buttons/${newicon} ${icon}
-    else
-        chroot . rsvg-convert -w 48 -h 48 -o root/.jwm/window_buttons/${newicon} /${icon}
-    fi
-done
+if [ "$PTHEME_JWM_BUTTONS" = "default" ]; then
+    sed -i -e '/^<ButtonClose>/d' -e '/^<ButtonMax>/d' -e '/^<ButtonMaxActive>/d' -e '/^<ButtonMin>/d' root/.jwm/jwmrc-personal
+else
+    Dir=usr/share/jwm/themes_window_buttons/${PTHEME_JWM_BUTTONS}
+    for icon in $Dir/*; do
+        ifile=$(basename $icon)
+        ext=${ifile##*.}
+        newicon=`echo $ifile|sed "s%${ext}$%png%"`
+        if [ "`which rsvg-convert`" ]; then
+            rsvg-convert -w 48 -h 48 -o root/.jwm/window_buttons/${newicon} ${icon}
+        else
+            chroot . rsvg-convert -w 48 -h 48 -o root/.jwm/window_buttons/${newicon} /${icon}
+        fi
+    done
+fi
 echo "jwm buttons: ${PTHEME_JWM_BUTTONS}"
 
 ##### GTK
@@ -121,6 +132,13 @@ gtk-toolbar-style = GTK_TOOLBAR_BOTH
 gtk-toolbar-icon-size = GTK_ICON_SIZE_LARGE_TOOLBAR
 _EOF
 fi
+if [ -d usr/share/themes/${PTHEME_GTK}/gtk-4.0 ]; then
+	mkdir -p root/.config/gtk-4.0
+	cat > root/.config/gtk-4.0/settings.ini << _EOF
+[Settings]
+gtk-theme-name = ${PTHEME_GTK}
+_EOF
+fi
 
 echo "gtk: ${PTHEME_GTK}"
 
@@ -145,6 +163,12 @@ gtk-button-images = 1
 gtk-enable-animations = 0
 EOF
 	fi
+	if [ -f root/.config/gtk-4.0/settings.ini ]; then
+		echo -e "gtk-icon-theme-name = $USE_ICON_THEME" >> root/.config/gtk-4.0/settings.ini
+		cat >> root/.config/gtk-4.0/settings.ini <<EOF
+gtk-enable-animations = 0
+EOF
+	fi
 	# then ROX
 	ROX_THEME_FILE="root/.config/rox.sourceforge.net/ROX-Filer/Options" # this could change in future
 	sed -i "s%<Option name=\"icon_theme\">.*%<Option name=\"icon_theme\">$USE_ICON_THEME</Option>%" $ROX_THEME_FILE
@@ -155,6 +179,10 @@ install -D -m 644 root/.gtkrc-2.0 etc/gtk-2.0/gtkrc
 if [ -f root/.config/gtk-3.0/settings.ini ]; then
 	install -D -m 644 root/.config/gtk-3.0/settings.ini etc/gtk-3.0/settings.ini
 	install -D -m 644 -o spot -g spot root/.config/gtk-3.0/settings.ini home/spot/.config/gtk-3.0/settings.ini
+fi
+if [ -f root/.config/gtk-4.0/settings.ini ]; then
+	install -D -m 644 root/.config/gtk-4.0/settings.ini etc/gtk-4.0/settings.ini
+	install -D -m 644 -o spot -g spot root/.config/gtk-4.0/settings.ini home/spot/.config/gtk-4.0/settings.ini
 fi
 
 ##### WALLPAPER #copy it as mv messes the themes
@@ -204,15 +232,20 @@ echo -n "${PTHEME_ICONS}" > etc/desktop_icon_theme
 echo "icons: ${PTHEME_ICONS}"
 
 ##### CURSOR
-if [ -d root/.icons/ ];then
-	if [ ! "`grep 'ORIGINAL THEME' <<< "$PTHEME_MOUSE"`" ] ; then
+mkdir -p root/.icons/
+if [ ! "`grep 'ORIGINAL THEME' <<< "$PTHEME_MOUSE"`" ] ; then
+	mkdir -p home/spot/.icons
+	rm -f root/.icons/default home/spot/.icons/default
+	if [ -d usr/share/icons/$PTHEME_MOUSE ]; then
+		ln -snf /usr/share/icons/$PTHEME_MOUSE root/.icons/default
+		ln -s /usr/share/icons/$PTHEME_MOUSE home/spot/.icons/default
+	else
 		ln -snf $PTHEME_MOUSE root/.icons/default
-		mkdir -p home/spot/.icons
-		ln -s ../../../root/.icons/default home/spot/.icons/
-		chroot . chown -R spot:spot /home/spot/.icons
+		ln -s ../../../root/.icons/default home/spot/.icons/ # this won't work
 	fi
-	echo "cursor: ${PTHEME_MOUSE}"
+	chroot . chown -R spot:spot /home/spot/.icons
 fi
+echo "cursor: ${PTHEME_MOUSE}"
 
 ##### GTKDIALOG
 [ -d root/.config/ptheme/ ] || mkdir -p root/.config/ptheme/

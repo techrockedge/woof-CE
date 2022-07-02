@@ -1,7 +1,7 @@
 if [ -z "$WOOF_CFLAGS"]; then
     case "$DISTRO_TARGETARCH" in
     arm) WOOF_CFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard" ;;
-    x86) WOOF_CFLAGS="-march=i486 -mtune=i686" ;;
+    x86) WOOF_CFLAGS="-march=i686 -mtune=i686" ;;
     x86_64) WOOF_CFLAGS="-march=x86-64 -mtune=generic" ;;
     esac
 fi
@@ -55,6 +55,19 @@ PKGS=
 
 # busybox must be first, so other petbuilds can use coreutils commands
 for NAME in $PETBUILDS; do
+    # peabee hack to reuse old petbuild output if BUILD_DEVX=no
+    if [ "$BUILD_DEVX" != "yes" ]; then
+        case "$NAME" in
+        pmaterial_icons|puppy_flat_icons|puppy_standard_icons) ;;
+        *)
+            echo "WARNING - petbuilds require BUILD_DEVX=yes"
+            [ -n "$GITHUB_ACTIONS" ] && exit 1
+            ;;
+        esac
+        PKGS="$PKGS $NAME"
+        continue
+    fi
+
     HASH=`cat ../DISTRO_PKGS_SPECS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} ../DISTRO_COMPAT_REPOS ../DISTRO_COMPAT_REPOS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} ../DISTRO_PET_REPOS ../rootfs-petbuilds/${NAME}/petbuild 2>/dev/null | md5sum | awk '{print $1}'`
     if [ ! -d "../petbuild-output/${NAME}-${HASH}" ]; then
         if [ $HAVE_ROOTFS -eq 0 ]; then
@@ -181,7 +194,7 @@ for NAME in $PETBUILDS; do
 
         cp -a ../petbuild-sources/${NAME}/* petbuild-rootfs-complete-${NAME}/tmp/
         cp -a ../rootfs-petbuilds/${NAME}/* petbuild-rootfs-complete-${NAME}/tmp/
-        CC="$WOOF_CC" CXX="$WOOF_CXX" CFLAGS="$WOOF_CFLAGS" CXXFLAGS="$WOOF_CXXFLAGS" LDFLAGS="$WOOF_LDFLAGS" MAKEFLAGS="$MAKEFLAGS" CCACHE_DIR=/root/.ccache CCACHE_NOHASHDIR=1 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONPYCACHEPREFIX=/root/.cache/__pycache__ PETBUILD_GTK=$PETBUILD_GTK $CHROOT_PFIX chroot petbuild-rootfs-complete-${NAME} bash -ec "cd /tmp && . ./petbuild && build"
+        CC="$WOOF_CC" CXX="$WOOF_CXX" CFLAGS="$WOOF_CFLAGS" CXXFLAGS="$WOOF_CXXFLAGS" LDFLAGS="$WOOF_LDFLAGS" MAKEFLAGS="$MAKEFLAGS" CCACHE_DIR=/root/.ccache CCACHE_NOHASHDIR=1 PKG_CONFIG_PATH="$PKG_CONFIG_PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONPYCACHEPREFIX=/root/.cache/__pycache__ PETBUILD_GTK=$PETBUILD_GTK $CHROOT_PFIX chroot petbuild-rootfs-complete-${NAME} bash -ec "cd /tmp && . /etc/DISTRO_SPECS && . ./petbuild && build"
         ret=$?
         umount -l petbuild-rootfs-complete-${NAME}/root/.cache
         umount -l petbuild-rootfs-complete-${NAME}/root/.ccache
@@ -232,6 +245,9 @@ for NAME in $PETBUILDS; do
                 for SO in `ls ../petbuild-output/${NAME}-${HASH}/${LIBDIR}/*.so* 2>/dev/null`; do
                     mv -f $SO ../petbuild-output/${NAME}-${HASH}/${LIBDIR}64/
                 done
+                if [ -d ../petbuild-output/${NAME}-${HASH}/${LIBDIR}/gio ]; then
+                    mv -f ../petbuild-output/${NAME}-${HASH}/${LIBDIR}/gio ../petbuild-output/${NAME}-${HASH}/${LIBDIR}64/
+                fi
                 rmdir ../petbuild-output/${NAME}-${HASH}/${LIBDIR} 2>/dev/null
             done
             ;;
@@ -244,6 +260,9 @@ for NAME in $PETBUILDS; do
                     for SO in `ls ../petbuild-output/${NAME}-${HASH}${PFIX}/${LIBDIR}/*.so* 2>/dev/null`; do
                         mv -f $SO ../petbuild-output/${NAME}-${HASH}${PFIX}/lib/${ARCHDIR}/
                     done
+                    if [ -d ../petbuild-output/${NAME}-${HASH}${PFIX}/${LIBDIR}/gio ]; then
+                        mv -f ../petbuild-output/${NAME}-${HASH}${PFIX}/${LIBDIR}/gio ../petbuild-output/${NAME}-${HASH}${PFIX}/lib/${ARCHDIR}/
+                    fi
                     rmdir ../petbuild-output/${NAME}-${HASH}${PFIX}/${LIBDIR}/${ARCHDIR} 2>/dev/null
                     rmdir ../petbuild-output/${NAME}-${HASH}${PFIX}/${LIBDIR} 2>/dev/null
                 done
@@ -265,7 +284,7 @@ for NAME in $PETBUILDS; do
 
         for EXTRAFILE in ../rootfs-petbuilds/${NAME}/*; do
             case "${EXTRAFILE##*/}" in
-            petbuild|*.patch|sha256.sum|*-*|DOTconfig|*.c) ;;
+            petbuild|*.patch|sha256.sum|*-*|DOTconfig|*.c|*.h) ;;
             *) cp -a $EXTRAFILE ../petbuild-output/${NAME}-${HASH}/
             esac
         done
