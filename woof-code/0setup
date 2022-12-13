@@ -45,6 +45,10 @@ else
   . /root/.packages/DISTRO_PET_REPOS
   cd /root/.packages
   RUNNINGPUP='yes'
+  if command -v apt > /dev/null; then
+    PKG_DOCS_DISTRO_COMPAT=""
+    REPOS_DISTRO_COMPAT=""
+  fi
 fi
 
 #======================================================================
@@ -64,7 +68,7 @@ if [ "$1" = "" ] ; then
 fi
 #======================================================================
 
-if wget --help | grep -q '\-\-show\-progress' ; then
+if wget --help | grep -q '\--show-progress' ; then
 	WGET='wget --no-check-certificate -q --show-progress'
 else
 	WGET='wget --no-check-certificate -q'
@@ -159,7 +163,7 @@ case $DISTRO_BINARY_COMPAT in ubuntu|trisquel|debian|devuan) #130319 removed |ra
    esac
 esac
 
-if [ "$DISTRO_BINARY_COMPAT" = "debian" ]; then
+if [ "$DISTRO_BINARY_COMPAT" = "debian" -a -n "$PKG_DOCS_DISTRO_COMPAT" ]; then
   wget --spider --tries 1 -T 3 -F --max-redirect 0 http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/
   if [ $? -eq 0 ]; then
    PKGLISTS_COMPAT_S="z|http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/main/binary-${DBIN_ARCH}/Packages.xz|Packages-debian-${DISTRO_COMPAT_VERSION}-security-main
@@ -173,6 +177,23 @@ z|http://deb.debian.org/debian-security/dists/${DISTRO_COMPAT_VERSION}-security/
     cat << EOF >> $DCRFILE
 # appended by 0setup
 REPOS_DISTRO_COMPAT="$REPOS_DISTRO_COMPAT z|http://deb.debian.org/debian-security|Packages-debian-${DISTRO_COMPAT_VERSION}-*"
+EOF
+   fi
+ fi
+elif [ "$DISTRO_BINARY_COMPAT" = "ubuntu" -a -n "$PKG_DOCS_DISTRO_COMPAT" ]; then
+  wget --spider --tries 1 -T 3 -F --max-redirect 0 http://archive.ubuntu.com/ubuntu/dists/${DISTRO_COMPAT_VERSION}-security/
+  if [ $? -eq 0 ]; then
+   PKGLISTS_COMPAT_S="z|http://archive.ubuntu.com/ubuntu/dists/${DISTRO_COMPAT_VERSION}-security/main/binary-${DBIN_ARCH}/Packages.xz|Packages-ubuntu-${DISTRO_COMPAT_VERSION}-security-main
+z|http://archive.ubuntu.com/ubuntu/dists/${DISTRO_COMPAT_VERSION}-security/universe/binary-${DBIN_ARCH}/Packages.xz|Packages-ubuntu-${DISTRO_COMPAT_VERSION}-security-universe
+z|http://archive.ubuntu.com/ubuntu/dists/${DISTRO_COMPAT_VERSION}-security/multiverse/binary-${DBIN_ARCH}/Packages.xz|Packages-ubuntu-${DISTRO_COMPAT_VERSION}-security-multiverse
+z|http://archive.ubuntu.com/ubuntu/dists/${DISTRO_COMPAT_VERSION}-security/restricted/binary-${DBIN_ARCH}/Packages.xz|Packages-ubuntu-${DISTRO_COMPAT_VERSION}-security-restricted"
+   download_pkg_dbs compat $PKGLISTS_COMPAT_S
+   PKGLISTS_COMPAT_UPDATES="$PKGLISTS_COMPAT_UPDATES $(echo "$PKGLISTS_COMPAT_S" | cut -f 3 -d "|" | tr '\n' ' ')"
+
+   if [ "$RUNNINGPUP" = "no" ]; then
+    cat << EOF >> $DCRFILE
+# appended by 0setup
+REPOS_DISTRO_COMPAT="$REPOS_DISTRO_COMPAT z|http://archive.ubuntu.com/ubuntu|Packages-ubuntu-${DISTRO_COMPAT_VERSION}-*"
 EOF
    fi
  fi
@@ -217,7 +238,7 @@ do
     fi
     #create an intermediate-converted file...
     #121113 added "Section"... 121113 insert STARTMARKER...
-    MANIPULATED1="$(grep -E '^Package:|^Installed\-Size:|^Architecture:|^Version:|^Pre-Depends:|^Depends:|^Filename:|^Description:|^Homepage:|^Section:' ${ONE_PKGLISTS_COMPAT}pre | tr '[\t"|`]' ' ' | tr -s ' ' | sed -e 's%^Installed\-Size%InstalledSize%' -e 's%^Package:%STARTMARKER|PKG\nPackage:%' -e 's%: %|%' -e 's% $%%')" #`geany
+    MANIPULATED1="$(grep -E '^Package:|^Installed-Size:|^Architecture:|^Version:|^Pre-Depends:|^Depends:|^Filename:|^Description:|^Homepage:|^Section:' ${ONE_PKGLISTS_COMPAT}pre | tr '[\t"|`]' ' ' | tr -s ' ' | sed -e 's%^Installed\-Size%InstalledSize%' -e 's%^Package:%STARTMARKER|PKG\nPackage:%' -e 's%: %|%' -e 's% $%%')" #`geany
     #call new app. note, this in turn calls /usr/local/petget/find_pkgs...
     if [ -n "$MANIPULATED1" ];then
      echo "$MANIPULATED1" > /tmp/woof-debdb.in
@@ -310,9 +331,28 @@ if [ "$DBUPDATEFLAG" = "yes" ];then
   echo -n "$PKGLISTS_COMPAT_UPDATES" | tr ' ' '\n' | grep "\-${REPOFIELD}$" | while read PKGUPDATES
   do
    [ ! -f "$PKGUPDATES" ] && continue
-   cat $PKGUPDATES $ONE_PKGLISTS_COMPAT > /tmp/0setup_xxx1
+   cat $ONE_PKGLISTS_COMPAT $PKGUPDATES | sort --stable --field-separator='|' --key=2,2 > /tmp/0setup_xxx1
    #want to discard the older package...
-   sort --reverse --version-sort --field-separator='|' --key=3,3 /tmp/0setup_xxx1 | sort --stable --unique --field-separator='|' --key=2,2 > $ONE_PKGLISTS_COMPAT
+   LASTPKG=
+   MAXVER=
+   MAXVERLINE=
+   while read ONELINE; do
+    IFS="|" read F1 F2 F3 F4 F5 F6 F7 F8 ETC <<< "$ONELINE"
+    # debdb2pupdb strips 7.81.0-1 from 7.81.0-1ubuntu1.6, must take it from the file name
+    VER=${F8##*/}
+    VER=${VER#${F2}_}
+    VER=${VER%_*.deb}
+    if [ "$F2" = "$LASTPKG" ]; then
+     vercmp "$VER" gt "$MAXVER" || continue
+     echo "Selecting $F2 $VER over $MAXVER" 1>&2
+    else
+     [ -n "$MAXVERLINE" ] && echo "$MAXVERLINE"
+     LASTPKG="$F2"
+    fi
+    MAXVER="$VER"
+    MAXVERLINE="$ONELINE"
+   done < /tmp/0setup_xxx1 > $ONE_PKGLISTS_COMPAT
+   echo "$MAXVERLINE" >> $ONE_PKGLISTS_COMPAT
    #...assumes pkg names remain the same, ex "firefox" (2nd field in db).
    mv -f $PKGUPDATES /tmp/$PKGUPDATES #dump -updates db file.
   done

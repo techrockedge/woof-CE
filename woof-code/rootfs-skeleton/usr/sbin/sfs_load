@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # sfs_load 28 Jan 2011 by shinobar
 # always assume squashfs 4.0
 # some code from the otf_sfs_loader by goingnuts, the sfs_installation.sh by 01micko and scrips by Barry
@@ -49,9 +49,19 @@
 
 . /etc/rc.d/PUPSTATE
 
-if [ -L /bin -o -L /sbin -o -L /lib -o -L /lib64 -o -L /lib32 -o -L /libx32 ]; then
+if [ "$PUNIONFS" = "overlay" ] ; then
+	exec sfs_load.overlay "$@"
+fi
 
- if [ "$1" ]; then
+sym_list=""
+for fld2 in bin sbin lib lib64 lib32 libx32 usr/bin usr/sbin usr/lib usr/lib64 usr/lib32 usr/libx32
+do
+  [ -L /$fld2 ] && sym_list="$sym_list $fld2"
+done
+
+if [ "$sym_list" != "" ]; then
+
+ if [ -n "$1" -a "${1:0:1}" != "-" ]; then
  
    SFSFILE="$(basename "$1")"
    MNTFLD="$(echo "${SFSFILE}-module" | sed -e 's#\ #_#g')"
@@ -62,30 +72,26 @@ if [ -L /bin -o -L /sbin -o -L /lib -o -L /lib64 -o -L /lib32 -o -L /libx32 ]; t
   
    FLD_INVALID=""
   
-    for fld2 in bin sbin lib lib64 lib32 libx32
+    for fld2 in $sym_list
     do
     if [ -d /mnt/$MNTFLD/$fld2 -a ! -L /mnt/$MNTFLD/$fld2 ]; then
-      FLD_INVALID="y"
+      FLD_INVALID="$fld2"
       break
      fi
     done
     
     umount /mnt/$MNTFLD
+    losetup -d "$DEVLOOP"
     rm -rf /mnt/$MNTFLD
        
     if [ "$FLD_INVALID" != "" ]; then
-      /usr/lib/gtkdialog/box_ok "sfs_load" error "$(gettext "This sfs should not be loaded because it has the wrong file structure")"
+      /usr/lib/gtkdialog/box_ok "sfs_load" warning "/$FLD_INVALID $(gettext "directory in this sfs will overwrite the system symlink. This will cause problems. Unable to continue with load.")"
       exit 1
     fi
  
  fi
  
 fi 
-
-
-if [ "$PUNIONFS" = "overlay" ] ; then
-	exit
-fi
 
 for i in $@ ; do
 	if [ "$i" = "stop" ] ; then #simple thing to do, do it as fast as possible
@@ -138,7 +144,7 @@ case "$1" in
 	-d|--debug) DEBUGFLAG="y";;
 esac
 
-[ "$DISPLAY" ] || LANG=C  # no nls as for console, without X
+[ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] || LANG=C  # no nls as for console, without X
 export TEXTDOMAIN=sfs_load
 export OUTPUT_CHARSET=UTF-8
 eval_gettext() {
@@ -598,6 +604,7 @@ afterwork() {
 	
 	
 	if [ "$HAS_UDEVDB" ]; then
+	  systemd-hwdb update 2>/dev/null
 	  #Check first if udev can update hwdb
 	  [ "$(udevadm --help 2>&1 | grep hwdb)" != "" ] && udevadm hwdb --update
 	fi
@@ -647,7 +654,7 @@ defaults-chooser' > $F
 				sleep 0.2
 			done
 		fi
-		if [ "$HAS_STARTUPS" != "" -a "$DISPLAY" ]; then	#v1.9.2
+		if [ "$HAS_STARTUPS" != "" ] && [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ]; then	#v1.9.2
 			for S in $HAS_STARTUPS; do
 				[ -x /root/Startup/$S ] && /root/Startup/$S &
 				sleep 0.2
@@ -1638,7 +1645,7 @@ DO_AFTERWORK=""
 SKIP_FIXMENUS=""
 GLOBAL_PARMS=""
 basename "$0" | grep -q '^un' && ACTION="unload"
-[ "$DISPLAY" != "" ] && GUI="y"
+[ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] && GUI="y"
 basename "$0" | grep -q 'debug' && DEBUGFLAG="y"	# v1.3.9
 
 # Temp work around. Do not mount SFS from /tmp when running in pupmode 5
@@ -1740,7 +1747,7 @@ if [ "$DO_AFTERWORK" ]; then
 	fi
 fi
 
-[ "$1" = "" -a "$DISPLAY" != "" ] && GUI="y"
+[ "$1" = "" ] && [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] && GUI="y"
 
 case "$1" in
 	-*) EXTRASFS=$(echo $1| cut -b2-); ACTION="unload";;

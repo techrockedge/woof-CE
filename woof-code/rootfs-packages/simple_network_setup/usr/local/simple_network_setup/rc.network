@@ -51,6 +51,7 @@
 #211002 v3.2 Try interfaces in connection (list) order, but only once per interface.
 #211215 v3.3 Accommodate spoofed gadget (USB-tethered smartphone) MAC addresses; add spoofing if macchanger installed; override default dhcpcd response timeout if not already in conf file, to compensate for router possibly slowing due to MAC spoofing; improved some variable names; stop waiting for all connections if top-profile connection detected.
 #211231 v3.3 Replace ethtool with ip-show test for LOWER_UP; refine dhcpcd success check; refine module loading check; refine interface trials (re 211002), using grouped connection profiles; skip waiting for module loading and wired connection if not during boot-up.
+#220704 v3.3.1 Increase sleep before dhcpcd, to reduce chance of dhcpcd not receiving valid IP address; add wired dhcpcd messages to bootsysinit.log.
 
 #If version is changed, ensure that new VERSION is set in the sns script. #190525
 
@@ -113,7 +114,7 @@ stop_interface() {
               && dhcpcd --release "$INTERFACE" 2>/dev/null
             ip route flush dev "$INTERFACE" #100703
             #in situation bring down interface from desktop icon...
-            [ -n "$DISPLAY" ] \
+            [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] \
               && LANG=$LANGORIG gtkdialog-splash -placement bottom -bg pink -timeout 5 -text "$(eval_gettext "Network interface '\$INTERFACE' has been disabled")" >/dev/null &
         fi
     done
@@ -334,7 +335,7 @@ run_wpa_supplicant() {
 start_wireless_connection() {
     if [ "$wCNT" -le 20 ]; then #170402
         echo -n '' > /etc/resolv.conf #211231
-        sleep 0.1 #timing precaution
+        sleep 2 #timing precaution #220704
         for ATTEMPT in 1 2 ; do
             echo "        EXECUTING: dhcpcd ${DHCPCD_TIMEOUT} ${DHCPCDFIX} ${INTERFACE}" >> /tmp/simple_network_setup/rc_network_wireless_connection_log #170924 #211215
 # shellcheck disable=SC2086 #word-split $DHCPCD_TIMEOUT & $DHCPCDFIX
@@ -364,7 +365,7 @@ start_wireless_connection() {
           && grep -qw "Generated.* $INTERFACE" /etc/resolv.conf; then #210212 end #211231
             echo "     SUCCESS" >> /tmp/simple_network_setup/rc_network_wireless_connection_log
             #in situation bring up interface from desktop icon...
-            [ "$DISPLAY" ] \
+            [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] \
               &&  gtkdialog-splash -placement bottom -bg lightgreen -timeout 5 -text "$(eval_gettext "Network interface '\${INTERFACE}' has been activated")" >/dev/null &
             cancel_splash_and_exit #one internet connection is enough! #170505
         else
@@ -399,11 +400,11 @@ initiate_wired_connection() { #Exits if successful; returns if unsuccessful
           head -n 1 | cut -f "$DHCPCDFIX_FIELD" -d '|')" #100325 ex: -I '' #210202 #211002
 
         echo -n '' > /etc/resolv.conf #211231
-        sleep 0.1 #timing precaution #210915
+        sleep 2 #timing precaution #210915 #220704
         for ATTEMPT in 1 2 ; do #210915
             echo "EXECUTING: dhcpcd ${DHCPCD_TIMEOUT} ${DHCPCDFIX} ${INTERFACE}" >> /tmp/simple_network_setup/rc_network_wired_connection_log #170924 #211215
 # shellcheck disable=SC2086 #word-split $DHCPCD_TIMEOUT & $DHCPCDFIX
-            dhcpcd $DHCPCD_TIMEOUT $DHCPCDFIX "$INTERFACE" >> /tmp/simple_network_setup/rc_network_wired_connection_log 2>&1 #211215
+            dhcpcd $DHCPCD_TIMEOUT $DHCPCDFIX "$INTERFACE" 2>&1 | tee -a /tmp/simple_network_setup/rc_network_wired_connection_log #211215 #220704
             local RC=$? #170402
             echo "dhcpcd return value: ${RC}" >> /tmp/simple_network_setup/rc_network_wired_connection_log #170924
             #need to wait awhile #210212...
@@ -428,7 +429,7 @@ initiate_wired_connection() { #Exits if successful; returns if unsuccessful
         done #210915
         if grep -q '^nameserver' /etc/resolv.conf \
           && grep -qw "Generated.* $INTERFACE" /etc/resolv.conf; then #210212 end #211231
-            [ "$DISPLAY" ] \
+            [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] \
               &&  gtkdialog-splash -placement bottom -bg lightgreen -timeout 5 -text "$(eval_gettext "Network interface '\${INTERFACE}' has been activated")" >/dev/null &
             cancel_splash_and_exit #success. #170505
         fi
@@ -448,7 +449,7 @@ case "$1" in
 esac
 [ ! -s /etc/simple_network_setup/connections ] && cancel_splash_and_exit #170505 171222
 
-if [ -z "$1" ] && [ -n "$DISPLAY" ]; then
+if [ -z "$1" ] && [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ]; then
     gtkdialog-splash -bg orange -close never -fontsize large -text "$(gettext 'Attempting to reconnect to a network...')" >/dev/null &
     echo $! >/tmp/sns_splash_pid
 fi

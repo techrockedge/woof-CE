@@ -1,12 +1,12 @@
-JWMDesk-3.5.4|JWMDesk|3.5.4||Desktop|794K||JWMDesk-3.5.4.pet||Manage JWM desktop||||
+JWMDesk-3.6|JWMDesk|3.6||Desktop|936K||JWMDesk-3.6.pet||Manage JWM desktop||||
 ListDD-2.2|ListDD|2.2||Utility|56K||ListDD-2.2.pet||List dynamic dependencies||||
 PackIt-packit-1.15|PackIt|packit-1.15||Utility|112K||packit-1.15.pet||Archiving/Compressing GUI||||
 Pup-Kview-1.4|Pup-Kview|1.4||System|64K||Pup-Kview-1.4.pet||Kernel module viewer||||
-Pup-SysInfo-3.2.1|Pup-SysInfo|3.2.1||System|198K||Pup-SysInfo-3.2.1.pet||System information utility||||
+Pup-SysInfo-3.6|Pup-SysInfo|3.6||System|256K||Pup-SysInfo-3.6.pet||System information utility||||
 PupApps-3.1|PupApps|3.1||Utility|229K||PupApps-3.1.pet||Launch favorite applications||||
 PupClockset-2.8.1|PupClockset|2.8.1||Desktop|125K||PupClockset-2.8.1.pet||PupClockset manager||||
-PupControl-3.4|PupControl|3.4||Setup|808K||PupControl-3.4.pet||Control panel||||
-PupMenu-6.3|PupMenu|6.3||Utility|1012K||PupMenu-6.3.pet||Find, launch or edit menu items||||
+PupControl-3.5|PupControl|3.5||Setup|326K||PupControl-3.5.pet||Control panel||||
+PupMenu-6.3.1|PupMenu|6.3.1||Utility|429K||PupMenu-6.3.1.pet||Find, launch or edit menu items||||
 Qemu_Control_Center-0.7|Qemu_Control_Center|0.7||System|44K||Qemu_Control_Center-0.7.pet||PC Emulator||||
 SaveFolderBackup-1.2|SaveFolderBackup|1.2||Utility|44K||SaveFolderBackup-1.2.pet||Save folder backup and restore||||
 UrxvtControl-1.4|UrxvtControl|1.4||Utility|76K||UrxvtControl-1.4.pet||Urxvt configuration||||
@@ -86,7 +86,7 @@ firmware_usbserial-170511|firmware_usbserial|170511||BuildingBlock|32||firmware_
 firmware_zd1201-170511|firmware_zd1201|170511||BuildingBlock|164K||firmware_zd1201-170511.pet||firmware||||
 fix_pi_overscan-0.3-rpi_all|fix_pi_overscan|0.3-rpi_all||Desktop|68K||fix_pi_overscan-0.3-rpi_all.pet||Pi Overscan or Underscan||||
 frisbee-1.4.4|frisbee|1.4.4||Network|280K||frisbee-1.4.4.pet|+gtkdialog&ge0.8.4|Frisbee network manager||||
-frugalpup-37|frugalpup|37||Setup|3280K||frugalpup-37.pet||FrugalPup - flexible frugal installer||||
+frugalpup-38|frugalpup|38||Setup|3280K||frugalpup-38.pet||FrugalPup - flexible frugal installer||||
 get_libreoffice-0.43|get_libreoffice|0.43||Document|82K||get_libreoffice-0.43.pet||Get LibreOffice download and install LibreOffice||||
 grub2_efi-2.02.2018.08-fd64|grub2_efi|2.02.2018.08-fd64||BuildingBlock|5588||grub2_efi-2.02.2018.08-fd64.pet||No description provided||||
 grub4dos-0.4.4.v1.9.4|grub4dos|0.4.4.v1.9.4||System|480K||grub4dos-0.4.4.v1.9.4.pet||Grub4Dos bootloader config||precise||
@@ -150,7 +150,7 @@ linux_firewall-2.0rc9-patched3-1|linux_firewall|2.0rc9-patched3-1||Network|148K|
 linux_firmware_dvb-1.20|linux_firmware_dvb|1.20||BuildingBlock|48K||linux_firmware_dvb-1.20.pet||dvb usb kernel firmware||||
 mtp_detect-0.12-noarch|mtp_detect|0.12-noarch||Filesystem|148K||mtp_detect-0.12-noarch.pet|+go-mtpfs|MTP - Mount android and MTP devices||||
 mtpaint_handbook-3.40-noarch|mtpaint_handbook|3.40-noarch||Graphic|3188||mtpaint_handbook-3.40-noarch.pet|+mtpaint|mtpaint hand book||||
-mtpaint_help-3.40-noarch|mtpaint_help|3.40-noarch||BuildingBlock|32K||mtpaint_help-3.40-noarch.pet||online help for mtpaint||||
+mtpaint_help-3.50-noarch|mtpaint_help|3.50-noarch||BuildingBlock|36K||mtpaint_help-3.50-noarch.pet||Connect to online help||||
 multirename-1.8|multirename|1.8||Filesystem|56K||multirename-1.8.pet||Batch file renamer||||
 multirename_NLS-1.8|multirename_NLS|1.8||BuildingBlock|28K||multirename_NLS-1.8.pet||no description provided||||
 network_roxapp_samba-0.13|network_roxapp_samba|0.13||Network|88K||network_roxapp_samba-0.13.pet||samba share mounter||||

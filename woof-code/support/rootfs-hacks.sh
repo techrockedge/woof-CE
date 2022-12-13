@@ -172,8 +172,9 @@ if [ -f ${SR}/usr/bin/Xorg ] && [ ! -L ${SR}/usr/bin/X ] ; then
 fi
 
 # need a working wget
-if [ -f ${SR}/etc/wgetrc ] ; then
+if [ -f ${SR}/etc/wgetrc -a ! -f ${SR}/etc/ssl/certs/ca-certificates.crt ] ; then
 	if ! grep -q "check_certificate = off" ${SR}/etc/wgetrc ; then
+		echo "WARNING: disabling wget certificate validation"
 		echo "check_certificate = off
 	#ca_certificate = /etc/ssl/certs/ca-certificates.crt
 	continue = on" >> ${SR}/etc/wgetrc
@@ -228,6 +229,7 @@ done
 
 # need to enforce pterminfo: xterm -- see /etc/profile
 if [ -d ${SR}/usr/share/terminfox ] ; then
+	[ -e ${SR}/usr/share/terminfo ] && cp -r ${SR}/usr/share/terminfo/* ${SR}/usr/share/terminfox/
 	rm -rf ${SR}/usr/share/terminfo
 	mv -f ${SR}/usr/share/terminfox ${SR}/usr/share/terminfo
 fi
@@ -268,5 +270,8 @@ if [ -e ${SR}/usr/bin/pmwget ] ; then
 		-e 's%<input file>/usr/local/lib/X11/mini.*%<input file>/usr/share/pixmaps/puppy/apply.svg</input> <height>20</height>%' \
 			${SR}/usr/bin/pmwget
 fi
+
+# if fusermount loses the SUID bit, AppImages don't work as spot
+[ -e ${SR}/bin/fusermount ] && chmod 4755 ${SR}/bin/fusermount
 
 ### END ###

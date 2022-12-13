@@ -9,7 +9,7 @@
 
 BB=/bin/busybox
 
-if [ "$DISPLAY" ] || [ "$XDG_CONFIG_HOME" ] ; then
+if [ "$DISPLAY" ] || [ "$WAYLAND_DISPLAY" ] || [ "$XDG_CONFIG_HOME" ] ; then
 	#ac.cidenta.lly ru.nning this sc.ript k.il.ls the sy.stem
 	exit
 fi
@@ -137,15 +137,6 @@ PDEV1=${PDEV1##*/} #basename - only want drv name
 ) > /etc/rc.d/PUPSTATE
 
 #exec /bin/ash <dev/console >dev/console 2>&1
-
-if [ "$BOOT_ATIME" = "noatime" -a "$DEV1FS" = "ext4" ] ; then
-	if [ -e /sys/block/${PDEV1}/queue/rotational ] ; then
-		if [ "$(cat /sys/block/${PDEV1}/queue/rotational)" = "0" ] ; then
-			# enable SSD TRIM
-			BOOT_ATIME="discard,noatime"
-		fi
-	fi
-fi
 
 #===================================================================
 #create a ram disk to change /dev/root to /dev/drv and/or check f.s.

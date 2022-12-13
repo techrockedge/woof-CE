@@ -132,6 +132,7 @@ extended_update() {
 	  fi
 	done
 
+	[ -x /usr/bin/mandb ] && mandb # this makes man -k work
 }
 
 update_cache_files() {
@@ -140,6 +141,7 @@ update_cache_files() {
 	depmod_func -a 2>/dev/null # some sfs may have kernel modules
 	
 	# some sfs may have udev hardware database
+	systemd-hwdb update 2>/dev/null
 	[ "$(udevadm --help 2>&1 | grep hwdb)" != "" ] && udevadm hwdb --update  
 }
 
@@ -298,7 +300,7 @@ if [ -f /initrd/tmp/version_update_flag ]; then
  for ONESCRIPT in dir2pet dirs2pets evince gtkdialog-splash lprshell man new2dir pet2tgz petspec pman pupdialog restartwm startx tgz2pet wmexit wmpoweroff wmreboot wvdialshell xterm xwin yaf-splash
  do [ -f ${OLDFILESMNTPT}/bin/$ONESCRIPT ] && cp -a -f --remove-destination ${NEWFILESMNTPT}/usr/bin/$ONESCRIPT /usr/bin/ 2>/dev/null
  done
- for ONESCRIPT in alsawizard askpass background_reshape bcrypt_gui bootflash bootmanager burniso2cd calcfreespace.sh cdburner-wizard chooselocale connectwizard connectwizard_2nd countrywizard cups_shell dotpup delayedrun deskshortcut.sh download_file eventmanager exploderpm filemnt fitimage2root fixdesk fixmenus fixPuppyPin floppy-format.sh freememappletshell gen_modem_init_string get_bluetooth_connection get_modem_alternate_device grubconfig grubconfigREADME.txt icon_switcher icon_switcher_cli input-wizard ipinfo loginmanager modemdisconnect modemprobe modemprobe_erase modemprobe_help modemtest networkdisconnect partview pcur pdict Pdisk petget pgprs-shell pmodemdiag pmonitork.sh pmonitorx.sh pmount pmovie pngoverlay pngoverlay.bac pngoverlay.sh pppconnect pppdisconnect pppsetup Pudd pup-advert-blocker pupautodetect pupcamera pupdial pupdial_init_hotpluggable pupdial_wizard_helper puppyhelp puppyinstaller puppypdf pupscan remasterpup2 remove_builtin report-video resizepfile.sh root2user save2flash savesession-dvd scannerwizard.sh securetelnetshell set_bg set_hwclock_type set-time-for-puppy set-xftdpi sfsget shutdownconfig snapmergepuppy sns spacereplace timezone-set updatenetmoduleslist.sh usb_modem_special_status usb_modeswitch_status video_upgrade_wizard video-wizard welcome1stboot welcome1stboot.bac wizardwizard xdelta_gui xgamma-gui xinitrc_test xorgwizard xorgwizard-automatic xrandrshell xserverwizard
+ for ONESCRIPT in alsawizard askpass background_reshape bcrypt_gui bootflash bootmanager burniso2cd calcfreespace.sh cdburner-wizard chooselocale connectwizard connectwizard_2nd countrywizard cups_shell dotpup delayedrun deskshortcut.sh download_file eventmanager exploderpm filemnt fitimage2root fixdesk fixmenus fixPuppyPin floppy-format.sh freememappletshell gen_modem_init_string get_bluetooth_connection get_modem_alternate_device grubconfig grubconfigREADME.txt icon_switcher icon_switcher_cli input-wizard ipinfo loginmanager modemdisconnect modemprobe modemprobe_erase modemprobe_help modemtest networkdisconnect partview pcur pdict Pdisk petget pgprs-shell pmodemdiag pmonitork.sh pmonitorx.sh pmount pmovie pngoverlay pngoverlay.bac pngoverlay.sh pppconnect pppdisconnect pppsetup Pudd pup-advert-blocker pupautodetect pupcamera pupdial pupdial_init_hotpluggable pupdial_wizard_helper puppyhelp puppyinstaller puppypdf pupscan remasterpup2 remove_builtin report-video resizepfile.sh root2user save2flash savesession-dvd scannerwizard.sh securetelnetshell set_bg set_hwclock_type set-time-for-puppy set-xftdpi sfsget shutdownconfig snapmergepuppy snapmergepuppy.overlay sns spacereplace timezone-set updatenetmoduleslist.sh usb_modem_special_status usb_modeswitch_status video_upgrade_wizard video-wizard welcome1stboot welcome1stboot.bac wizardwizard xdelta_gui xgamma-gui xinitrc_test xorgwizard xorgwizard-automatic xrandrshell xserverwizard
  do [ -f ${OLDFILESMNTPT}/bin/$ONESCRIPT ] && cp -a -f --remove-destination ${NEWFILESMNTPT}/usr/sbin/$ONESCRIPT /usr/sbin/ 2>/dev/null
  done
  [ -f ${OLDFILESMNTPT}usr/local/petget ] && cp -a -f --remove-destination ${NEWFILESMNTPT}/usr/local/petget /usr/local/ 
@@ -311,6 +313,7 @@ if [ -f /initrd/tmp/version_update_flag ]; then
  find -L / \( -mount -path '*/lib/*' -type l -name *.so -o -path '*/lib/*' -type l -name *.so.* \) -delete
 
  basic_update
+ bdrv-update
  #*** sometimes these go back to 755...
  chmod 1777 /tmp
  chmod 777 /var
@@ -326,7 +329,8 @@ cp -af ${NEWFILESMNTPT}/etc/DISTRO_SPECS /etc/
 touch /etc/DISTRO_SPECS #important, as snapmergepuppy uses '-u' cp option. ...huh, why?
 
 # if aufs layers have changed, may need to fix menu (etc)...
-if [ "$PUNIONFS" = "aufs" ];then
+. /etc/rc.d/PUPSTATE
+if [ "$PUNIONFS" = "aufs" -o "$PUNIONFS" = "overlay" ];then
 	. /etc/rc.d/BOOTCONFIG
 	# multisession-cd, different folder at each startup, so screen out...
 	xLASTUNIONRECORD="`echo -n "$LASTUNIONRECORD" | sed -e 's/^20[0-9][0-9][-0123456789]* //'`"
@@ -334,7 +338,7 @@ if [ "$PUNIONFS" = "aufs" ];then
 	#-
 	if [ "$xLASTUNIONRECORD" != "$xPREVUNIONRECORD" ];then
 		echo -en " layered-filesystem \\033[1;35mnext boot will be faster!\\033[0;39m" > /dev/console
-		echo "Aufs layers have changed since previous boot, updating menus..."
+		echo "$PUNIONFS layers have changed since previous boot, updating menus..."
 		update_cache_files
 	fi
 fi

@@ -86,6 +86,7 @@ echo "### If 'missing' is after a firmware entry it is missing or non-free and w
 # NOTE 1: some firmware files won't exist because they are proprietary
 # broadcom wireless is an example, and some dvb tuners and some bluetooth
 
+intelbt=0
 for m in `find "$module_dir" -type f -name "*.ko"`
 do
 	modinfo "$m" -F firmware | while read fw
@@ -125,6 +126,19 @@ do
 				;;
 			esac
 		else
+			case $fw in
+				intel/ibt-*.sfi|intel/ibt-*.ddc) # intel/ibt-%u-%u.sfi is formatted at runtime
+				[ $intelbt -eq 1 ] && continue
+				mkdir -p $FIRMWARE_RESULT_DIR/intel
+				for F in $SRC_FW_DIR/intel/ibt-*.{sfi,ddc} $SRC_FW_DIR/intel/ibt-hw-*.bseq;do
+					cp -L -n $F $FIRMWARE_RESULT_DIR/intel
+					fw_msg ${F#$SRC_FW_DIR/} $fw_tmp_list # log to zdrv
+				done
+				intelbt=1
+				continue
+				;;
+			esac
+
 			if [ -e "$SRC_FW_DIR/$fw" ];then
 				mkdir -p $FIRMWARE_RESULT_DIR/$fw_dir
 				cp -L -n $SRC_FW_DIR/$fw $FIRMWARE_RESULT_DIR/$fw_dir
@@ -134,8 +148,38 @@ do
 			fi
 		fi		
 	done
+
+	case $m in
+	*/ath*k*.ko) # some firmware doesn't appear in modinfo
+	fw_top_dir=${m##*/}
+	fw_top_dir=${fw_top_dir%%_*}
+	fw_top_dir=${fw_top_dir%.ko}
+	strings -a $m > /tmp/modstrings
+	for F in $SRC_FW_DIR/$fw_top_dir/*/hw*;do
+		fw_subdir=${F#$SRC_FW_DIR/}
+		[ -e $FIRMWARE_RESULT_DIR/$fw_subdir ] && continue
+		grep -Fqlm1 ${fw_subdir#$fw_top_dir/} /tmp/modstrings || continue
+		mkdir -p $FIRMWARE_RESULT_DIR/${fw_subdir%/*}
+		cp -r -L -n $F $FIRMWARE_RESULT_DIR/${fw_subdir%/*}
+		fw_msg $fw_subdir $fw_tmp_list # log to zdrv
+	done
+	rm -f /tmp/modstrings
+	;;
+	*/ralink/rt*/rt*.ko) # rt2800pci doesn't list rt3290.bin
+	strings -a $m > /tmp/modstrings
+	for F in $SRC_FW_DIR/rt*.bin;do
+		grep -Fqlm1 ${F##*/} /tmp/modstrings || continue
+		cp -L -n $F $FIRMWARE_RESULT_DIR
+		fw_msg ${F##*/} $fw_tmp_list # log to zdrv
+	done
+	rm -f /tmp/modstrings
+	;;
+	esac
 done
 # extra firmware from other sources
+if [ -n "`find $module_dir -name 'snd-sof*.ko' | head -n 1`" ];then
+	./get_sof.sh `pwd`/zfirmware_workdir || exit 1
+fi
 if [ "$EXTRA_FW" = 'yes' ];then
 	./firmware_extra.sh
 	sed -i -e '/^b43/d' -e '/^ipw/d' $fw_tmp_list

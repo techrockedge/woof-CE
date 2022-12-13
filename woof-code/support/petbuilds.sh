@@ -219,13 +219,12 @@ for NAME in $PETBUILDS; do
         rm -rf ../petbuild-output/${NAME}-${HASH}/root/.ccache
         rm -rf ../petbuild-output/${NAME}-${HASH}/var/cache
         rm -rf ../petbuild-output/${NAME}-${HASH}/tmp
+        rm -rf ../petbuild-output/${NAME}-${HASH}/run
         rm -rf ../petbuild-output/${NAME}-${HASH}/etc/ssl
         rm -f ../petbuild-output/${NAME}-${HASH}/etc/resolv.conf
         rm -f ../petbuild-output/${NAME}-${HASH}/etc/ld.so.cache
         rm -f ../petbuild-output/${NAME}-${HASH}/root/.wget-hsts
 
-        rm -rf ../petbuild-output/${NAME}-${HASH}/usr/share/man
-        rm -rf ../petbuild-output/${NAME}-${HASH}/usr/share/info
         rm -f ../petbuild-output/${NAME}-${HASH}/usr/share/icons/hicolor/icon-theme.cache
         rm -rf ../petbuild-output/${NAME}-${HASH}/usr/lib/python*
         rm -rf ../petbuild-output/${NAME}-${HASH}/lib/pkgconfig
@@ -282,13 +281,6 @@ for NAME in $PETBUILDS; do
             strip --strip-all -R .note -R .comment ${ELF} 2>/dev/null
         done
 
-        for EXTRAFILE in ../rootfs-petbuilds/${NAME}/*; do
-            case "${EXTRAFILE##*/}" in
-            petbuild|*.patch|sha256.sum|*-*|DOTconfig|*.c|*.h) ;;
-            *) cp -a $EXTRAFILE ../petbuild-output/${NAME}-${HASH}/
-            esac
-        done
-
         find ../petbuild-output/${NAME}-${HASH} -name '.git*' -delete
     fi
 
@@ -324,6 +316,13 @@ for NAME in $PKGS; do
     for SUFFIX in _DOC _NLS; do
         [ ! -d ../packages-${DISTRO_FILE_PREFIX}/${NAME}${SUFFIX} ] && continue
         sed -e "s/^${NAME}/${NAME}${SUFFIX}/" -e "s/|${NAME}/|${NAME}${SUFFIX}/g" ../packages-${DISTRO_FILE_PREFIX}/${NAME}/pet.specs > ../packages-${DISTRO_FILE_PREFIX}/${NAME}${SUFFIX}/pet.specs
+    done
+
+    for EXTRAFILE in ../rootfs-petbuilds/${NAME}/*; do
+        case "${EXTRAFILE##*/}" in
+        petbuild|*.patch|sha256.sum|*-*|DOTconfig|*.c|*.h) ;;
+        *) cp -a $EXTRAFILE ../packages-${DISTRO_FILE_PREFIX}/${NAME}/
+        esac
     done
 
     rmdir ../packages-${DISTRO_FILE_PREFIX}/${NAME}/usr/share 2>/dev/null

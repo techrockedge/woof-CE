@@ -13,7 +13,7 @@ if [ -f ../_00build.conf ] ; then
 fi
 
 CWD=`pwd`
-wget --help | grep -q '\-\-show\-progress' && WGET_SHOW_PROGRESS='-q --show-progress'
+wget --help | grep -q '\--show-progress' && WGET_SHOW_PROGRESS='-q --show-progress'
 WGET_OPT='--no-check-certificate '${WGET_SHOW_PROGRESS}
 
 MWD=$(pwd)
@@ -96,6 +96,7 @@ if [ -n "$DOTconfig_file" -a -n "$LatestK" ] ; then
 		DOTconfig_new_ver=${DOTconfig_new_ver_pre% *}
 		DOTconfig_type=${DOTconfig_new_ver_pre#* }
 		log_msg "Latest Linux $DOTconfig_new_ver $DOTconfig_type"
+		b=`echo "$b" | sed 's/\\./\\\\./g'`
 		NEW_DOTconfig_file=`echo $DOTconfig_file | sed "s%$b%$DOTconfig_new_ver%"`
 		log_msg "New DOTconfig_file is $NEW_DOTconfig_file"
 		mv $DOTconfig_file $NEW_DOTconfig_file
@@ -222,7 +223,7 @@ fi
 log_msg "kernel_version=${kernel_version}"
 log_msg "kernel_version_info=${kernel_version_info}"
 case "$kernel_version" in
-	3.*|4.*|5.*) ok=1 ;; #----
+	3.*|4.*|5.*|6.*) ok=1 ;; #----
 	*) exit_error "ERROR: Unsupported kernel version" ;;
 esac
 
@@ -236,11 +237,13 @@ export kernel_version
 # $package_name_suffix $custom_suffix $kernel_ver
 aufs_git_3="https://github.com/puppylinux-woof-CE/aufs3-standalone.git"
 aufs_git_4="https://github.com/sfjro/aufs4-standalone.git"
-aufs_git_5="https://github.com/sfjro/aufs5-standalone.git"
+aufs_git_5="https://github.com/sfjro/aufs-standalone.git"
+aufs_git_6="https://github.com/sfjro/aufs-standalone.git"
 [ ! "$kernel_mirrors" ] && kernel_mirrors="https://www.kernel.org/pub/linux/kernel"
 ksubdir_3=v3.x #http://www.kernel.org/pub/linux/kernel/v3.x
 ksubdir_4=v4.x
 ksubdir_5=v5.x
+ksubdir_6=v6.x
 #-- random kernel mirror first
 rn=$(( ( RANDOM % $(echo "$kernel_mirrors" | wc -l) )  + 1 ))
 x=0
@@ -257,15 +260,21 @@ if [ -f /etc/DISTRO_SPECS ] ; then
 	[ ! "$package_name_suffix" ] && package_name_suffix=${DISTRO_FILE_PREFIX}
 fi
 
-if [ "$AUFS" != "no" -a -f DOTconfig ] ; then
+if [ -f DOTconfig ] ; then
 	echo ; tail -n10 README ; echo
-	for i in CONFIG_AUFS_FS=y CONFIG_NLS_CODEPAGE_850=y
+	BUILTINS="CONFIG_NLS_CODEPAGE_850=y"
+	[ "$AUFS" != "no" ] && BUILTINS="$BUILTINS CONFIG_AUFS_FS=y"
+	vercmp ${kernel_version} ge 3.18 && BUILTINS="$BUILTINS CONFIG_OVERLAY_FS=y"
+	for i in $BUILTINS
 	do
 		grep -q "$i" DOTconfig && { echo "$i is ok" ; continue ; }
 		echo -e "\033[1;31m""\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   WARNING     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n""\033[0m"
-		if [ "$i" = "CONFIG_AUFS_FS=y" ] ; then
+		if [ "$AUFS" != "no" -a "$i" = "CONFIG_AUFS_FS=y" ] ; then
 			log_msg "For your kernel to boot AUFS as a built in is required:"
 			fs_msg="File systems -> Miscellaneous filesystems -> AUFS"
+		elif [ "$i" = "CONFIG_OVERLAY_FS=y" ] ; then
+			log_msg "For your kernel to boot overlay as a built in is required:"
+			fs_msg="File systems -> Overlay filesystem support"
 		else
 			log_msg "For NLS to work at boot some configs are required:"
 			fs_msg="NLS Support"
@@ -276,6 +285,7 @@ if [ "$AUFS" != "no" -a -f DOTconfig ] ; then
 	the kernel has downloaded and been patched.
 	Look under ' $fs_msg'
 	"
+		[ -n "$GITHUB_ACTIONS" ] && exit 1
 		[ "$AUTO" != "yes" ] && echo -n "PRESS ENTER" && read zzz
 	done
 fi
@@ -333,6 +343,7 @@ case $kernel_series in
 	3) ksubdir=${ksubdir_3} ; aufs_git=${aufs_git_3} ; aufs_git_dir=aufs3_sources_git ;;
 	4) ksubdir=${ksubdir_4} ; aufs_git=${aufs_git_4} ; aufs_git_dir=aufs4_sources_git ;;
 	5) ksubdir=${ksubdir_5} ; aufs_git=${aufs_git_5} ; aufs_git_dir=aufs5_sources_git ;;
+	6) ksubdir=${ksubdir_6} ; aufs_git=${aufs_git_6} ; aufs_git_dir=aufs6_sources_git ;;
 esac
 
 ## create directories for the results
@@ -590,6 +601,7 @@ if [ "$AUFS" != "no" ] ; then
 		patch -N -p1 < ${patchfile} &>> ${BUILD_LOG}
 		if [ $? -ne 0 ] ; then
 			log_msg "WARNING: failed to add some Aufs patches to the kernel sources."
+			[ -n "$GITHUB_ACTIONS" ] && exit 1
 			log_msg "Check it manually and either CRTL+C to bail or hit enter to go on"
 			read goon
 		fi
@@ -1030,7 +1042,7 @@ fi
 
 if [ "$STRIP_KMODULES" = "yes" ] ; then
  [ -z "$STRIP" ] && STRIP=strip
- if [ "$(which $STRIP)" != "" -a "$($STRIP --help | grep "\-\-strip\-unneeded")" != "" ]; then
+ if [ "$(which $STRIP)" != "" -a "$($STRIP --help | grep "\--strip-unneeded")" != "" ]; then
 	for mods1 in $(find "$(pwd)/output/${linux_kernel_dir}" -type f -name "*.ko")
 	do
 		file "$mods1" | grep -q "unstripped" || $STRIP --strip-unneeded "$mods1"

@@ -27,6 +27,7 @@ if [ "$PTHEME" != "" ] ; then
 	theme="$PTHEME"
 fi
 
+[ "$theme" = "" ] && rm -rf usr/sbin/ptheme usr/share/ptheme usr/share/applications/ptheme.desktop || (
 if [ ! -f usr/share/ptheme/globals/"${theme}" ];then
 	echo "Invalid theme: $theme - defaulting to Original Pup"
 	theme="Original Pup"
@@ -37,13 +38,6 @@ echo "see $PWD/usr/share/ptheme/globals for available themes"
 echo "that you can specify in build.conf: PTHEME=<theme>"
 
 . usr/share/ptheme/globals/"${theme}"
-
-cat << EOF > root/.pthemerc
-PTHEME_GTK="$PTHEME_GTK"
-PTHEME_ICONS_GTK="$PTHEME_ICONS_GTK"
-PTHEME_YAMBAR_COLOR="$PTHEME_YAMBAR_COLOR"
-PTHEME_FUZZEL="$PTHEME_FUZZEL"
-EOF
 
 ##### JWM
 [ ! -d root/.jwm ] && mkdir -p root/.jwm
@@ -58,18 +52,6 @@ for I in 1 2 3 4; do
 		grep -vF '_hybrid</Include>' root/.jwm/jwmrc-tray$I | sed -e 's%autohide="\(top\|bottom\|left\|right\)" %autohide="off"%' -e "s%layer=\"above\"%layer=\"below\"%" > root/.jwm/jwmrc-tray${I}_hybrid
 	fi
 done
-
-cat << EOF > root/.jwm/jwmrc-wallpaper
-<?xml version="1.0"?>
-
-<JWM>
-
-<Desktops>
-	<Background type="image">/usr/share/backgrounds/${PTHEME_WALL}</Background>
-</Desktops>
-</JWM>
-EOF
-
 #---
 echo "$PTHEME_JWM_TRAY" > root/.jwm/tray_active_preset
 echo "jwm tray: ${PTHEME_JWM_TRAY}"
@@ -282,3 +264,4 @@ sync
 echo "done"
 echo
 echo
+)

@@ -288,11 +288,15 @@ fi
 if [ "$MYBASE" = "quicksetup" ];then #120313 only allow in main quicksetup window.
 
    # check connectivity for state of firewall checkbox
-   if wget -q --spider -T 4 http://distro.ibiblio.org ;then # returns other than 0 we're not connected
-     ONLINE='true'
+   ONLINE='false'
+   if pidof -s connmand;then
+     connmand-wait-online --timeout=4 && ONLINE='true'
+   else
+     wget -q --spider -T 4 http://distro.ibiblio.org && ONLINE='true' # returns other than 0 we're not connected
+   fi
+   if [ "$ONLINE" = 'true' ];then
      FWTT=$(gettext "Tick checkbox to activate the firewall (recommended)")
    else
-     ONLINE='false'
      FWTT=$(gettext "Firewall can not be activated until you are connected")
    fi
 
@@ -324,11 +328,6 @@ if [ "$MYBASE" = "quicksetup" ];then #120313 only allow in main quicksetup windo
           <action>help ntp</action>
         </button>
      </hbox>'
-    #if ConnMan takes care of NTP, hide the checkbox
-    if [ -n "`pidof connmand`" ]; then
-        CHKBOXNTP=""
-        CHECK_NTP="$DEFAULT_NTP"
-    fi
 
     #130701...
     SPOT_XML=''
@@ -455,7 +454,7 @@ if [ "$SET_COUNTRY" ];then
    rm -rf /usr/lib/locale/$CURRLANG
    UTF8='.UTF-8'
   fi
-  [ "`echo -n "$CURRLANG" | grep 'UTF\-8'`" != "" ] && UTF8='.UTF-8'
+  [ "`echo -n "$CURRLANG" | grep 'UTF-8'`" != "" ] && UTF8='.UTF-8'
   BASELANG="`basename $CURRLANG .utf8`"
   BASELANG="`basename $BASELANG .UTF-8`"
   #does the locale need to have UTF-8 enabled?...
@@ -1408,14 +1407,15 @@ Note: Before downloading the langpack, you will have to make an Internet connect
      fi
     fi
    fi
+  fi
 
    #120209 scripts fixdesk and fixmenus translate files to new language (as specified in /usr/share/sss/menu_strings and desk_strings).
    #so need to call them here...
    #note, these are also called in /etc/rc.d/rc.update ...
+  if [ "$OLDLANGLINE" != "$NEWLANGLINE" ];then
    LANG=${LANGCHOICE}${UTF8} fixdesk
    LANG=${LANGCHOICE}${UTF8} fixmenus
    #...no need to refresh screen, as changing locale requires restart of X.
-
   fi
  fi
 fi #end SET_LOCALE
@@ -1675,6 +1675,11 @@ if [ "`echo -n "$FLAG_CHANGED" | grep "restart"`" != "" ];then
  if [ "$EXIT" = "OK" ];then
   rm -rf /tmp/.X0-lock
   sync
+  SHELL=`pidof -- -sh`
+  if [ -n "$SHELL" ];then
+   rm -f /tmp/bootcnt.txt /root/.XLOADED
+   exec kill -HUP $SHELL
+  fi
   exec restartwm
  fi
 fi

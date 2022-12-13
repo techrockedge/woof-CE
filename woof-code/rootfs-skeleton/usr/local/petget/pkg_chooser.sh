@@ -360,8 +360,8 @@ echo -n "" > /tmp/petget_proc/petget_active_repo_list
 REPOS_RADIO=""
 repocnt=0
 #sort with -puppy-* repos last...
-aPRE="`echo -n "$PKG_REPOS_ENABLED" | tr ' ' '\n' | grep -v '\-puppy\-' | tr -s '\n' | tr '\n' ' '`"
-bPRE="`echo -n "$PKG_REPOS_ENABLED" | tr ' ' '\n' | grep '\-puppy\-' | tr -s '\n' | tr '\n' ' '`"
+aPRE="`echo -n "$PKG_REPOS_ENABLED" | tr ' ' '\n' | grep -v '\-puppy-' | tr -s '\n' | tr '\n' ' '`"
+bPRE="`echo -n "$PKG_REPOS_ENABLED" | tr ' ' '\n' | grep '\-puppy-' | tr -s '\n' | tr '\n' ' '`"
 for ONEREPO in $aPRE $bPRE #ex: ' Packages-puppy-precise-official Packages-puppy-noarch-official Packages-ubuntu-precise-main Packages-ubuntu-precise-multiverse '
 do
  [ ! -f /root/.packages/$ONEREPO ] && continue
@@ -404,13 +404,17 @@ cp  /usr/share/pixmaps/puppy/close.svg "$ICONDIR"/true.svg
 ln -sf "$ICONDIR"/true.svg "$ICONDIR"/tgb0.svg
 
 # check screen size
-while read a b c ; do
-	case $a in -geometry)
-		SCRNXY=${b%%+*} #1366x768
-		read SCRN_X SCRN_Y <<< "${SCRNXY//x/ }"
-		break
-	esac
-done <<< "$(LANG=C xwininfo -root)"
+if [ "$XDG_SESSION_TYPE" = 'wayland' ]; then
+	read SCRNXY ETC < <(wlr-randr | grep -m1 current)
+else
+	while read a b c ; do
+		case $a in -geometry)
+			SCRNXY=${b%%+*} #1366x768
+			break
+		esac
+	done <<< "$(LANG=C xwininfo -root)"
+fi
+read SCRN_X SCRN_Y <<< "${SCRNXY//x/ }"
 
 UO_1="1000"
 UO_2="650"

@@ -4,12 +4,6 @@
 . ../_00build.conf
 [ ! -e ../_00build_2.conf ] || . ../_00build_2.conf
 
-PETS=`cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 2,5 -d \| | grep -v ^compat\| | cut -f 2 -d \| | tr '\n' ' '`
-if [ -n "$PETS" ]; then
-	echo "Cannot build bdrv, using pet packages: $PETS"
-	exit 0
-fi
-
 debootstrap=`command -v debootstrap || :`
 if [ -z "$debootstrap" ]; then
 	echo "WARNING: debootstrap is missing"
@@ -46,8 +40,8 @@ cat rootfs-complete/etc/group > bdrv/etc/group
 cat rootfs-complete/etc/passwd > bdrv/etc/passwd
 cat rootfs-complete/etc/shadow > bdrv/etc/shadow
 
-mount --bind /etc/resolv.conf bdrv/etc/resolv.conf
-trap "umount -l bdrv/etc/resolv.conf" INT ERR
+rm -f bdrv/etc/resolv.conf
+cat /etc/resolv.conf > bdrv/etc/resolv.conf
 
 # configure the package manager
 case "$DISTRO_BINARY_COMPAT" in
@@ -60,11 +54,6 @@ deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
 deb ${MIRROR}-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free
 EOF
 	fi
-
-	cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
-APT::Install-Recommends "false";
-APT::Install-Suggests "false";
-EOF
 	;;
 
 ubuntu)
@@ -81,6 +70,13 @@ EOF
 	[ "$ARCH" != "amd64" ] || chroot bdrv dpkg --add-architecture i386
 	;;
 esac
+cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
+APT::Install-Recommends "false";
+APT::Install-Suggests "false";
+# https://github.com/debuerreotype/debuerreotype/blob/6952be0a084e834bd25aa623c94f6ad342899b55/scripts/debuerreotype-minimizing-config#L88
+DPkg::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb || true"; };
+APT::Update::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb || true"; };
+EOF
 chroot bdrv apt-get update
 chroot bdrv apt-get upgrade -y
 
@@ -92,22 +88,24 @@ chroot bdrv apt-mark hold busybox-static
 chroot bdrv apt-mark hold snapd
 
 # install all packages that didn't get fully redirected to devx
-PKGS=`cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 1,5 -d \| |
-while IFS=\| read GENERICNAME NAME; do
+PKGS=`cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 1,2,5 -d \| |
+while IFS=\| read GENERICNAME TYPE NAME; do
+	[ "$TYPE" = "compat" ] || continue
+
 	case "$NAME" in
 	*-dev|*-dev-bin|*-devtools|*-headers) continue ;;
 	esac
 
 	[ -d ../packages-${DISTRO_FILE_PREFIX}/${GENERICNAME//:}_DEV -a ! -e ../packages-${DISTRO_FILE_PREFIX}/${GENERICNAME//:} ] || echo "$NAME"
 done`
-chroot bdrv apt-get install -y --no-install-recommends $PKGS
+chroot bdrv apt-get install -y $PKGS
 
 # add missing package recommendations, Synaptic and gdebi
-chroot bdrv apt-get install -y --no-install-recommends command-not-found synaptic gdebi
+chroot bdrv apt-get install -y command-not-found synaptic gdebi
 sed -e 's/^Categories=.*/Categories=X-Setup-puppy/' -i bdrv/usr/share/applications/synaptic.desktop
 echo "NoDisplay=true" >> bdrv/usr/share/applications/gdebi.desktop
 
-umount -l bdrv/etc/resolv.conf
+rm -f bdrv/etc/resolv.conf
 
 # remove any unneeded packages
 chroot bdrv apt-get autoremove -y --purge
@@ -118,7 +116,7 @@ chroot bdrv apt-mark hold `chroot bdrv dpkg-query -f '${binary:Package}\n' -W | 
 # remove unneeded files
 chroot bdrv apt-get clean
 rm -f bdrv/var/lib/apt/lists/* 2>/dev/null || :
-rm -rf bdrv/home bdrv/root bdrv/dev bdrv/run bdrv/var/log bdrv/var/cache/man bdrv/var/cache/fontconfig bdrv/var/cache/ldconfig bdrv/etc/ssl bdrv/lib/udev bdrv/lib/modprobe.d bdrv/lib/firmware bdrv/usr/share/mime bdrv/etc/ld.so.cache bdrv/usr/bin/systemctl bdrv/usr/bin/systemd-analyze bdrv/usr/bin/systemctl bdrv/usr/lib/systemd/systemd-networkd bdrv/usr/lib/systemd/systemd bdrv/usr/lib/systemd/systemd-journald bdrv/usr/share/fonts
+rm -rf bdrv/home bdrv/root bdrv/dev bdrv/run bdrv/var/log bdrv/var/cache/man bdrv/var/cache/fontconfig bdrv/var/cache/ldconfig bdrv/etc/ssl bdrv/lib/udev bdrv/lib/modprobe.d bdrv/lib/firmware bdrv/usr/share/mime bdrv/etc/ld.so.cache bdrv/usr/bin/systemctl bdrv/usr/bin/systemd-analyze bdrv/usr/bin/systemctl bdrv/usr/lib/systemd/systemd-networkd bdrv/usr/lib/systemd/systemd bdrv/usr/lib/systemd/systemd-journald bdrv/usr/share/fonts bdrv/etc/fonts
 rm -rf `find bdrv -name __pycache__`
 for ICONDIR in bdrv/usr/share/icons/*; do
 	[ "$ICONDIR" != "bdrv/usr/share/icons/hicolor" ] || continue
@@ -142,7 +140,9 @@ find bdrv | tac | while read FILE; do
 done
 
 # delete files and directories present in the main SFS
-cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 5 -d \| | while read NAME; do
+cat ../status/findpkgs_FINAL_PKGS-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION} | cut -f 2,5 -d \| | while IFS=\| read TYPE NAME; do
+	[ "$TYPE" = "compat" ] || continue
+
 	LIST=bdrv/var/lib/dpkg/info/$NAME:$ARCH.list
 	[ -f "$LIST" ] || LIST=bdrv/var/lib/dpkg/info/$NAME.list
 	[ -f "$LIST" ] || continue

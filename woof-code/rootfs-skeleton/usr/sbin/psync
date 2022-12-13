@@ -143,7 +143,7 @@ usage() {
 	echo
 }
 
-[ "$DISPLAY" ] && export GUI=1
+[ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] && export GUI=1
 
 for i in $@; do
 	case $1 in
@@ -215,7 +215,6 @@ export psync_chkbox='
           <variable>PSYNC_ENABLED</variable>
           <action>if true enable_psync</action>
           <action>if false disable_psync</action>
-          <sensitive>'$([ -n "`pidof connmand`" ] && echo false || echo true)'</sensitive>
         </checkbox>
 '
 

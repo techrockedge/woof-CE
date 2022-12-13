@@ -2,7 +2,7 @@
 
 function git_aufs_util_branch() {
 	# aufs-util branch - must keep this updated - git://git.code.sf.net/p/aufs/aufs-util.git
-	for i in 5.8 5.0 4.19 4.14 4.9 4.4 4.1 4.0 3.18 3.14 3.9 3.2
+	for i in 6.0 5.8 5.0 4.19 4.14 4.9 4.4 4.1 4.0 3.18 3.14 3.9 3.2
 	do
 		if vercmp ${kernel_version} ge ${i} ; then
 			aufs_util_branch=${i}
@@ -79,6 +79,8 @@ function git_aufs_branch() {
 		;;
 	5.10)  aufsv=5.10
 		vercmp ${kernel_version} ge 5.10.82 && aufsv='5.10.82'
+		vercmp ${kernel_version} ge 5.10.117 && aufsv='5.10.117'
+		vercmp ${kernel_version} ge 5.10.140 && aufsv='5.10.140'
 		;;
 	5.15)  aufsv=5.15
 		vercmp ${kernel_version} ge 5.15.5 && aufsv='5.15.5'

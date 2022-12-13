@@ -50,7 +50,7 @@ case $script in
    wmreboot|wmpoweroff)
       ## reboot/shutdown ##
       . /etc/rc.d/PUPSTATE
-      if [ $PUPMODE -eq 5 ] && [ $DISPLAY ] ; then #first shutdown.
+      if [ $PUPMODE -eq 5 ] && [ -n "$DISPLAY" -o -n "$WAYLAND_DISPLAY" ] ; then #first shutdown.
          shutdownconfig #dlgs for creating save-file.
          #...writes results to /tmp/shutdownconfig_results, which /etc/rc.d/rc.shutdown reads.
          [ $? -eq 255 ] && exit #abort shutdown.
@@ -71,7 +71,7 @@ sleep 0.2
 sync
 
          #xfce       #lxde     #LXQt        #window managers
-for i in xfce4-panel lxsession lxqt-session `cat /etc/windowmanager` jwm icewm openbox X Xorg Xwayland labwc
+for i in xfce4-panel lxsession lxqt-session `cat /etc/windowmanager` jwm icewm openbox X Xorg labwc
 do
 	for pid in `pidof $i` ; do
 		kill $pid || kill -9 $pid
@@ -83,8 +83,8 @@ done
 # shutdown sequence and the second one unblocks it when it uses the other end of
 # the leaked socket
 if [ -n "$WAYLAND_DISPLAY" ]; then
-	dwl=`pidof dwl-kiosk`
-	[ -n "$dwl" ] && nohup sh -c "while kill $dwl 2>/dev/null; do sleep 1; done" &
+	dwl=`pidof dwl`
+	[ -n "$dwl" ] && nohup sh -c "while kill $dwl 2>/dev/null; do sleep 1; done" > /dev/null &
 fi
 
 ### END ###
