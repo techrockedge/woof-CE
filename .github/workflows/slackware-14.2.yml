@@ -6,14 +6,21 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            compat-distro: slackware64
+          - arch: x86
+            compat-distro: slackware
     if: github.repository == 'puppylinux-woof-CE/woof-CE'
     uses: ./.github/workflows/build.yml
     with:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
-      arch: x86
-      compat-distro: slackware
+      arch: ${{ matrix.arch }}
+      compat-distro: ${{ matrix.compat-distro }}
       compat-distro-version: 14.2
       kernel: 4.19.x
-      artifact: ${{ github.workflow }}-${{ github.run_number }}
+      artifact: ${{ matrix.compat-distro }}-14.2-${{ github.run_number }}
       retention: 30
