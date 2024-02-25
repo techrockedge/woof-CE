@@ -91,6 +91,9 @@ if [ "$iso_path" ] ; then
   FOUND_ISO=
 
   [ "$iso_dev" ] && img_dev="$iso_dev"
+  if [ "$img_dev" = '' ]; then
+    [ "$GRUB_ROOT" ] && img_dev=$GRUB_ROOT
+  fi
   if [ "$img_dev" ] ; then
     img_dev="${img_dev##*/}"
     decode_id "$img_dev"
@@ -115,7 +118,7 @@ if [ "$iso_path" ] ; then
   fi
 
   ISO_LOOP=$(losetup -f)
-  if losetup $ISO_LOOP "$FOUND_ISO" ; then
+  if losetup -r $ISO_LOOP "$FOUND_ISO" ; then
     echo "Using ${ISO_PSAVE}:${iso_path}"
     P_BP_ID=${ISO_LOOP#/dev/}
     SAVE_BP_ID=$ISO_PSAVE

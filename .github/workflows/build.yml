@@ -35,13 +35,16 @@ on:
         required: true
       variant:
         type: string
+      runner:
+        type: string
+        default: 'ubuntu-22.04'
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ inputs.runner }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repo }}
         ref: ${{ inputs.ref }}
@@ -50,7 +53,7 @@ jobs:
         mkdir -p local-repositories petbuild-sources petbuild-cache petbuild-output
         ln -s `pwd`/local-repositories ../local-repositories
     - name: Get cached local-repositories
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: local-repositories
         key: local-repositories-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-${{ github.sha }}
@@ -86,7 +89,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends patchelf dc debootstrap librsvg2-bin zstd xml2
+        sudo apt-get install -y --no-install-recommends dc debootstrap librsvg2-bin zstd xml2 syslinux-utils xorriso
         [ ${{ inputs.compat-distro }} != devuan ] || curl https://git.devuan.org/devuan/debootstrap/raw/branch/master/scripts/ceres | sudo tee /usr/share/debootstrap/scripts/`echo ${{ inputs.compat-distro-version }} | sed s/64$//`
     - name: 0setup
       timeout-minutes: 10
@@ -113,18 +116,18 @@ jobs:
         echo "kernel_artifact=$name" >> $GITHUB_ENV
       shell: bash
     - name: Get cached kernel-kit output
-      uses: dawidd6/action-download-artifact@v2
+      uses: dawidd6/action-download-artifact@v3
       with:
         repo: puppylinux-woof-CE/woof-CE
         branch: testing
-        workflow: ${{ startsWith(inputs.kernel, 'debian-') && 'dpup-kernel.yml' || 'kernel-kit.yml' }}
+        workflow: ${{ startsWith(inputs.kernel, 'debian-') && 'dpup-kernel.yml' || (startsWith(inputs.kernel, 'ubuntu-') && 'upup-kernel.yml' || 'kernel-kit.yml') }}
         workflow_conclusion: success
         name: ${{ env.kernel_artifact }}
         path: output
     - name: Move cached kernel-kit output
       run: sudo mv output ../woof-out_*/kernel-kit/
     - name: Get cached petbuild-output
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: petbuild-output
         key: petbuild-output-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-${{ github.sha }}
@@ -132,7 +135,7 @@ jobs:
           petbuild-output-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-
           petbuild-output-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-
     - name: Get cached petbuild-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: petbuild-cache
         key: petbuild-cache-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-${{ github.sha }}
@@ -140,7 +143,7 @@ jobs:
           petbuild-cache-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-
           petbuild-cache-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-
     - name: Get cached petbuild-sources
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: petbuild-sources
         key: petbuild-sources-${{ inputs.arch }}-${{ inputs.compat-distro }}-${{ inputs.compat-distro-version }}-${{ inputs.variant }}-${{ github.sha }}
@@ -150,10 +153,6 @@ jobs:
           petbuild-sources-${{ inputs.arch }}-${{ inputs.compat-distro }}-
           petbuild-sources-${{ inputs.arch }}-
           petbuild-sources-
-    - name: Install cdrtools
-      run: |
-        [ -f local-repositories/mkisofs ] || (curl -L https://sourceforge.net/projects/cdrtools/files/alpha/cdrtools-3.02a09.tar.bz2/download | tar -xjf- && cd cdrtools-3.02 && make -j`nproc` && mv mkisofs/OBJ/x86_64-linux-cc/mkisofs ../local-repositories/mkisofs)
-        sudo install -m 755 local-repositories/mkisofs /usr/local/bin/mkisofs
     - name: 3builddistro
       timeout-minutes: 180
       run: |
@@ -168,7 +167,7 @@ jobs:
         for i in `ls ../woof-out_*/woof-output-*/*.{sfs,iso} 2>/dev/null`; do sudo mv -f $i .; done
         sudo mv -f ../woof-out_*/kernel-kit/output/kernel_sources-*.sfs .
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact }}
         path: |

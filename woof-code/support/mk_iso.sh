@@ -296,6 +296,7 @@ mk_efi_img() {
 	TGT=$1
 	gfp=$2
 	gcer=$3
+	root=$4
 	if [ -n "$UEFI_32" ] ; then
 		xFEILD='*'
 	else
@@ -328,6 +329,7 @@ mk_efi_img() {
 		cp $gcer /tmp/efi_img/EFI/boot/ || return 5
 	fi
 	rm -f /tmp/efi_img/EFI/boot/grub.cfg
+	cp -r /tmp/efi_img/EFI $root/ || return 6 # required for UEFI support in UNetbootin
 	echo "unmounting /tmp/efi_img"
 	umount /tmp/efi_img || return 7
 	losetup -a | grep -o -q "${FREE_DEV##*/}" && losetup -d $FREE_DEV
@@ -342,13 +344,15 @@ mk_iso() {
 	tmp_isoroot=$1 	# input
 	OUTPUT=$2 		# output
 	BOOT_CAT="-c boot/boot.catalog"
+	MKISOFS="mkisofs"
+	command -v mkisofs > /dev/null || MKISOFS="xorriso -as mkisofs"
 	if [ "$UEFI_ISO" ] ; then
-		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} \
+		${MKISOFS} -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} \
 			-eltorito-alt-boot -eltorito-platform efi -b boot/efi.img -no-emul-boot "$tmp_isoroot" || exit 100
 		[ $? -ne 0 ] && exit 1
 		UEFI_OPT=-u
 	else
-		mkisofs -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} "$tmp_isoroot" || exit 101
+		${MKISOFS} -iso-level 4 -D -R -o $OUTPUT -b isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table ${BOOT_CAT} "$tmp_isoroot" || exit 101
 		[ $? -ne 0 ] && exit 1
 		UEFI_OPT=''
 	fi
@@ -493,7 +497,7 @@ cp -fv ${PX}/usr/share/boot-dialog/splash.jpg ${BUILD}/boot/
 
 # build efi image
 if [ -n "$UEFI_ISO" ] ; then
-	mk_efi_img $BUILD/boot $FPBOOT "$CER" || exit $?
+	mk_efi_img $BUILD/boot $FPBOOT "$CER" $BUILD || exit $?
 	rm -rf /tmp/grub2 # cleanup
 fi
 

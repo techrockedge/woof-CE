@@ -75,8 +75,20 @@ for NAME in $PETBUILDS; do
             rm -rf petbuild-rootfs-complete
             cp -a rootfs-complete petbuild-rootfs-complete
 
-            rm -f sh petbuild-rootfs-complete/bin/sh
+            [ "$USR_SYMLINKS" = "yes" ] && usrmerge petbuild-rootfs-complete 1
+
+            rm -f petbuild-rootfs-complete/bin/sh
             ln -s bash petbuild-rootfs-complete/bin/sh
+
+            # these can be skipped, rc.update generates this cache
+            for PROG in update-mime-database gtk-update-icon-cache glib-compile-schemas; do
+                rm -f petbuild-rootfs-complete/usr/bin/$PROG
+                cat << EOF > petbuild-rootfs-complete/usr/bin/$PROG
+#!/bin/sh
+echo "Skipping $PROG"
+EOF
+                chmod 755 petbuild-rootfs-complete/usr/bin/$PROG
+            done
 
             cp -f /etc/resolv.conf petbuild-rootfs-complete/etc/
             cp -f ../packages-templates/ca-certificates/pinstall.sh petbuild-rootfs-complete/
@@ -144,6 +156,8 @@ for NAME in $PETBUILDS; do
             if [ ! -f petbuild-rootfs-complete/bin/busybox ]; then
                 if [ -f ../petbuild-output/busybox-latest/bin/busybox ]; then # busybox petbuild
                     install -D -m 755 ../petbuild-output/busybox-latest/bin/busybox petbuild-rootfs-complete/bin/busybox
+                elif [ -f ../petbuild-output/busybox-latest/usr/bin/busybox ]; then # busybox petbuild
+                    install -D -m 755 ../petbuild-output/busybox-latest/usr/bin/busybox petbuild-rootfs-complete/bin/busybox
                 elif [ -f ../packages-${DISTRO_FILE_PREFIX}/busybox/bin/busybox ]; then # prebuilt busybox
                     install -D -m 755 ../packages-${DISTRO_FILE_PREFIX}/busybox/bin/busybox petbuild-rootfs-complete/bin/busybox
                 elif [ "$NAME" != "busybox" ]; then

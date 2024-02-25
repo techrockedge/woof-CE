@@ -6,7 +6,7 @@ export TEXTDOMAIN=ptheme
 export OUTPUT_CHARSET=UTF-8
 
 #check is X is runnning
-pidof -s X Xorg dwl labwc > /dev/null && export X_IS_RUNNING=true || export X_IS_RUNNING=false
+pidof -s X Xorg `cat /etc/windowmanager` > /dev/null && export X_IS_RUNNING=true || export X_IS_RUNNING=false
 
 export WORKDIR=$HOME/.ptheme/tmp/ptheme
 [ ! -d $WORKDIR ] && mkdir -p $WORKDIR
@@ -163,6 +163,11 @@ _EOF
 		echo "gtk-theme-name=\"${THEME}\"" >> /root/.gtkrc-2.0
 	fi
 	install -D -m 644 $HOME/.gtkrc-2.0 /etc/gtk-2.0/gtkrc
+
+	if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+		. /etc/rc.d/wl_func
+		apply_gtk_settings
+	fi
 }
 
 set_font (){

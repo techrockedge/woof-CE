@@ -6,8 +6,9 @@
 
 debootstrap=`command -v debootstrap || :`
 if [ -z "$debootstrap" ]; then
-	echo "WARNING: debootstrap is missing"
+	echo -n "WARNING: debootstrap is missing. Press ENTER to continue build without apt support or CTRL-C to abort the build: "
 	[ -z "$GITHUB_ACTIONS" ] || exit 1
+	read isitbad
 	exit 0
 fi
 
@@ -34,10 +35,12 @@ mkdir -p "$CACHE_DIR"
 TARBALL="${CACHE_DIR}/debootstrap-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}.tar.gz"
 [ "$USR_SYMLINKS" != "yes" ] || TARBALL="${CACHE_DIR}/debootstrap-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}-usrmerge.tar.gz"
 
+[ "$DISTRO_BINARY_COMPAT" != "debian" ] || [ "$DISTRO_COMPAT_VERSION" != "bullseye" -a "$DISTRO_COMPAT_VERSION" != "bookworm" ] || DEBOOTSTRAP_OPTS="--include=sysvinit-core"
+
 if [ "$USR_SYMLINKS" = "yes" -a ! -e ${TARBALL} ]; then
-	$debootstrap --arch=$ARCH --variant=minbase --make-tarball=${TARBALL} ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
+	$debootstrap --arch=$ARCH --variant=minbase ${DEBOOTSTRAP_OPTS} --make-tarball=${TARBALL} ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
 elif [ ! -e ${TARBALL} ]; then
-	$debootstrap --no-merged-usr --arch=$ARCH --variant=minbase --make-tarball=${TARBALL} ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
+	$debootstrap --no-merged-usr --arch=$ARCH --variant=minbase ${DEBOOTSTRAP_OPTS} --make-tarball=${TARBALL} ${DISTRO_COMPAT_VERSION} bdrv ${MIRROR}
 fi
 
 # create a tiny installation of the compatible distro
@@ -60,25 +63,51 @@ cat /etc/resolv.conf > bdrv/etc/resolv.conf
 # configure the package manager
 case "$DISTRO_BINARY_COMPAT" in
 debian)
-	echo "deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free" > bdrv/etc/apt/sources.list
-
-	if [ "$DISTRO_COMPAT_VERSION" != "sid" ]; then
-		cat << EOF >> bdrv/etc/apt/sources.list
+	case "$DISTRO_COMPAT_VERSION" in
+	sid)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free non-free-firmware
+EOF
+		;;
+	stretch|buster|bullseye)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free
 deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
 deb ${MIRROR}-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free
 EOF
-	fi
+		;;
+	*)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free non-free-firmware
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free non-free-firmware
+deb ${MIRROR}-security ${DISTRO_COMPAT_VERSION}-security main contrib non-free non-free-firmware
+EOF
+		;;
+	esac
 	;;
 
 devuan)
-	echo "deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free" > bdrv/etc/apt/sources.list
-
-	if [ "$DISTRO_COMPAT_VERSION" != "ceres" ]; then
-		cat << EOF >> bdrv/etc/apt/sources.list
+	case "$DISTRO_COMPAT_VERSION" in
+	ceres)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free non-free-firmware
+EOF
+		;;
+	ascii|beowulf|chimaera)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free
 deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free
 deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-security main contrib non-free
 EOF
-	fi
+		;;
+	*)
+		cat << EOF > bdrv/etc/apt/sources.list
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION} main contrib non-free non-free-firmware
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-updates main contrib non-free non-free-firmware
+deb ${MIRROR} ${DISTRO_COMPAT_VERSION}-security main contrib non-free non-free-firmware
+EOF
+		;;
+	esac
 	;;
 
 ubuntu)
@@ -98,6 +127,7 @@ esac
 cat << EOF > bdrv/etc/apt/apt.conf.d/00puppy
 APT::Install-Recommends "false";
 APT::Install-Suggests "false";
+APT::Autoremove::SuggestsImportant "false";
 EOF
 chroot bdrv apt-get update
 chroot bdrv apt-get upgrade -y
@@ -105,6 +135,9 @@ chroot bdrv apt-get upgrade -y
 # blacklist packages that may conflict with packages in the main SFS
 chroot bdrv apt-mark hold busybox
 chroot bdrv apt-mark hold busybox-static
+
+# prevent systemd from being installed
+[ "$DISTRO_BINARY_COMPAT" != "debian" ] || [ "$DISTRO_COMPAT_VERSION" != "bullseye" -a "$DISTRO_COMPAT_VERSION" != "bookworm" ] || chroot bdrv apt-mark hold systemd
 
 # snap is broken without systemd
 [ "$DISTRO_BINARY_COMPAT" = "devuan" ] || chroot bdrv apt-mark hold snapd
@@ -129,10 +162,30 @@ echo "NoDisplay=true" >> bdrv/usr/share/applications/gdebi.desktop
 
 rm -f bdrv/etc/resolv.conf
 
+mkdir -p bdrv/usr/sbin
+cat << EOF > bdrv/usr/sbin/auto-setup-spot
+#!/bin/ash
+
+# this script is a best-effort attempt to configure problematic applications to run as spot
+
+PROGS=""
+while read PROG; do
+	PROG=\${PROG##*/}
+	echo "Auto-configuring \$PROG to run as spot ..."
+	PROGS="\$PROGS \$PROG=true"
+done < <(grep -hE '^(/usr/bin/(firefox|firefox-[a-z]+|google-chrome-[a-z]+|chromium|chromium-browser|vivaldi-[a-z]+|brave-browser|microsoft-edge-[a-z]+|transmission-gtk|transmission-cli|transmission-daemon|seamonkey|sylpheed|claws-mail|thunderbird|vlc|steam|code|librewolf|hexchat|zoom))|/usr/games/steam$' /var/lib/dpkg/info/*.list)
+
+[ -n "\$PROGS" ] && setup-spot \$PROGS
+
+exit 0
+EOF
+chmod 755 bdrv/usr/sbin/auto-setup-spot
+
 cat << EOF >> bdrv/etc/apt/apt.conf.d/00puppy
 # https://github.com/debuerreotype/debuerreotype/blob/6952be0a084e834bd25aa623c94f6ad342899b55/scripts/debuerreotype-minimizing-config#L88
 DPkg::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb || true"; };
 APT::Update::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb || true"; };
+DPkg::Post-Invoke { "/usr/sbin/auto-setup-spot"; };
 EOF
 tar -C bdrv -c var/cache/apt/archives | gzip -1 > ${CACHE_DIR}/archives-${DISTRO_BINARY_COMPAT}-${DISTRO_COMPAT_VERSION}.tar.gz
 
@@ -145,7 +198,7 @@ chroot bdrv apt-mark hold `chroot bdrv dpkg-query -f '${binary:Package}\n' -W | 
 # remove unneeded files
 chroot bdrv apt-get clean
 rm -f bdrv/var/lib/apt/lists/* 2>/dev/null || :
-rm -rf bdrv/home bdrv/root bdrv/dev bdrv/run bdrv/var/log bdrv/var/cache/man bdrv/var/cache/fontconfig bdrv/var/cache/ldconfig bdrv/etc/ssl bdrv/lib/udev bdrv/lib/modprobe.d bdrv/lib/firmware bdrv/usr/share/mime bdrv/etc/ld.so.cache bdrv/usr/bin/systemctl bdrv/usr/bin/systemd-analyze bdrv/usr/bin/systemctl bdrv/usr/lib/systemd/systemd-networkd bdrv/usr/lib/systemd/systemd bdrv/usr/lib/systemd/systemd-journald bdrv/usr/share/fonts bdrv/etc/fonts bdrv/etc/init.d bdrv/etc/rc*.d
+rm -rf bdrv/home bdrv/root bdrv/dev bdrv/run bdrv/var/log bdrv/var/cache/man bdrv/var/cache/fontconfig bdrv/var/cache/ldconfig bdrv/etc/ssl bdrv/lib/udev bdrv/lib/modprobe.d bdrv/lib/firmware bdrv/usr/share/mime bdrv/etc/ld.so.cache bdrv/usr/bin/systemctl bdrv/usr/bin/systemd-analyze bdrv/usr/bin/systemctl bdrv/usr/lib/systemd/systemd-networkd bdrv/usr/lib/systemd/systemd bdrv/usr/lib/systemd/systemd-journald bdrv/usr/share/fonts bdrv/etc/fonts bdrv/etc/init.d bdrv/etc/rc*.d bdrv/etc/rc.* bdrv/usr/lib/*/security/pam_elogind.so bdrv/lib/*/security/pam_systemd.so bdrv/usr/share/dbus-1/system-services/org.freedesktop.login1.service
 rm -rf `find bdrv -name __pycache__`
 for ICONDIR in bdrv/usr/share/icons/*; do
 	[ "$ICONDIR" != "bdrv/usr/share/icons/hicolor" ] || continue
@@ -194,6 +247,17 @@ mkdir -p bdrv/usr/lib
 sed "s/^ID=.*/ID=${DISTRO_BINARY_COMPAT}/" rootfs-complete/usr/lib/os-release > bdrv/usr/lib/os-release
 echo "VERSION_CODENAME=${DISTRO_COMPAT_VERSION}" >> bdrv/usr/lib/os-release
 chmod 644 bdrv/usr/lib/os-release
+
+# add-shell needs these
+if [ "$USR_SYMLINKS" = "yes" ]; then
+	ln -s chown-FULL bdrv/usr/bin/chown
+else
+	ln -s chown-FULL bdrv/bin/chown
+fi
+ln -s realpath-FULL bdrv/usr/bin/realpath
+
+# steam needs this
+ln -s sha256sum-FULL bdrv/usr/bin/sha256sum
 
 # open .deb files with gdebi
 if [ -e rootfs-complete/usr/local/bin/rox ]; then

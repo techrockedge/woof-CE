@@ -12,8 +12,6 @@
 #As a last resort, if target pkg is wrong, a file 'FIXUPHACK' is a script that can be at top dir
 #  in template. It executes in target, with current-dir set to where FIXUPHACK is located. (ex: perl_tiny).
 
-[ -n "$GITPOD_WORKSPACE_ID" -a "`id -u`" -ne 0 ] && exec fakeroot $0 "$@"
-
 #set -x
 MWD=$(pwd)
 export LANG=C #faster.
@@ -120,10 +118,10 @@ pre_process_pkg() {
 	# which contains code to fix/trim dowm stuff to speed up processing...
 	if [ -f ${MWD}/packages-templates/${GENERICNAME}/_PRE ] ; then
 		echo " executing packages-templates/${GENERICNAME}/_PRE"
-		( cd ${PKG_DIR} ; sh ${MWD}/packages-templates/${GENERICNAME}/_PRE )
+		( cd ${PKG_DIR} ; bash ${MWD}/packages-templates/${GENERICNAME}/_PRE )
 	elif [ -f packages-templates/${GENERICNAME}_PRE ] ; then
 		echo " executing packages-templates/${GENERICNAME}_PRE"
-		( cd ${PKG_DIR} ; sh ${MWD}/packages-templates/${GENERICNAME}_PRE )
+		( cd ${PKG_DIR} ; bash ${MWD}/packages-templates/${GENERICNAME}_PRE )
 	fi
 }
 
@@ -490,9 +488,9 @@ do
  if [ -f "$FIXUPHACK_FILE" ];then
 	echo " executing ${FIXUPHACK_FILE}"
 	if [ -d $PKG_DIR ] ; then
-		( cd $PKG_DIR ; sh ${MWD}/${FIXUPHACK_FILE} )
+		( cd $PKG_DIR ; bash ${MWD}/${FIXUPHACK_FILE} )
 	elif [ -d $DEV_DIR ] ; then #python-dev
-		( cd $DEV_DIR ; sh ${MWD}/${FIXUPHACK_FILE} )
+		( cd $DEV_DIR ; bash ${MWD}/${FIXUPHACK_FILE} )
 	fi
  fi
 
