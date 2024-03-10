@@ -61,6 +61,12 @@ color_normal=cyan/black
 menu_color_highlight=yellow/red
 menu_color_normal=light-gray/black
 
+if [ -e /ucode.cpio ]; then
+  ucode_parm="/ucode.cpio"
+else
+  ucode_parm=
+fi
+
 EOF
 }
 
@@ -75,6 +81,27 @@ color_normal=cyan/black
 #menu_color_highlight=black/light-gray
 menu_color_highlight=yellow/red
 menu_color_normal=light-gray/black
+
+if [ -z "\$rootuuid" ]; then
+  if search --file --set=iso_part --no-floppy \$iso_path; then
+    probe --set=rootuuid --fs-uuid \$iso_part
+  fi
+fi
+if [ -z "\$rootuuid" ]; then
+  dev_parm=
+else
+  dev_parm="img_dev=\${rootuuid}"
+fi
+if [ -e /ucode.cpio ]; then
+  ucode_parm="/ucode.cpio"
+else
+  ucode_parm=
+fi
+if [ -e /local-initrd.gz ]; then
+  local_parm="/local-initrd.gz"
+else
+  local_parm=
+fi
 
 EOF
 }
@@ -104,21 +131,19 @@ build_grub2_cfg() {
 	outfile="$1" # /path/to/grub.cfg or /path/to/loopback.cfg
 	distrodesc="$2" # "Slacko Puppy $ver Fossa Puppy $ver etc 
 	bootopts="$3" # pfix=fsck pmedia=cd etc
-	micro="$4" # bool - add option to load ucode.cpio
 	loopback=''
-	echo $outfile | grep -q 'loopback' && loopback='find_iso=${iso_path}'
-	if [ "$micro" = 'true' ] ; then
-		INITRDG='if [ -e /ucode.cpio ]; then
-      initrd /ucode.cpio /initrd.gz
-    else
-      initrd /initrd.gz
-    fi'
+	echo $outfile | grep -q 'loopback' && loopback='${dev_parm} img_loop=${iso_path}'
+	if [ "$loopback" ]; then
+		INITRDMSG='echo "Loading ${ucode_parm} /initrd.gz ${local_parm}"'
+		INITRDG='initrd ${ucode_parm} /initrd.gz ${local_parm}'
 	else
-		INITRDG='initrd /initrd.gz'
+		INITRDMSG='echo "Loading ${ucode_parm} /initrd.gz"'
+		INITRDG='initrd ${ucode_parm} /initrd.gz'
 	fi
 	cat >> $outfile <<EOF # append
 menuentry "${distrodesc}" {
     linux /vmlinuz pmedia=cd $bootopts $loopback
+    $INITRDMSG
     $INITRDG
 }
 
@@ -377,10 +402,14 @@ OUT=${WOOF_OUTPUT}/${ISO_BASENAME}.iso
 ISOLINUX=`find $PX/usr -maxdepth 3 -type f -name 'isolinux.bin'`
 CHAIN32=`find $PX/usr -maxdepth 5 -type f -name 'chain.c32' | grep -v efi`
 #FIXUSB=`find $PX/usr -maxdepth 2 -type f -name 'fix-usb.sh'`
-if [ -f "devx/usr/lib/shim/shimx64.efi.signed" -a -f "devx/usr/lib/grub/x86_64-efi-signed/gcdx64.efi.signed" -a -f "devx/usr/share/grub/unicode.pf2" ] && [ -f "devx/usr/lib/shim/mmx64.efi.signed" -o -f "devx/usr/lib/shim/mmx64.efi" ] ; then
+if [ -f "devx/usr/lib/shim/shimx64.efi.signed" -o -f "devx/usr/lib/shim/shimx64.efi.signed.latest" ] && [ -f "devx/usr/lib/grub/x86_64-efi-signed/gcdx64.efi.signed" -a -f "devx/usr/share/grub/unicode.pf2" ] && [ -f "devx/usr/lib/shim/mmx64.efi.signed" -o -f "devx/usr/lib/shim/mmx64.efi" ] ; then
 	(
 		mkdir -p /tmp/grub2/EFI/boot
-		cp -f devx/usr/lib/shim/shimx64.efi.signed /tmp/grub2/EFI/boot/bootx64.efi
+		if [ -f devx/usr/lib/shim/shimx64.efi.signed.latest ]; then
+			cp -f devx/usr/lib/shim/shimx64.efi.signed.latest /tmp/grub2/EFI/boot/bootx64.efi
+		else
+			cp -f devx/usr/lib/shim/shimx64.efi.signed /tmp/grub2/EFI/boot/bootx64.efi
+		fi
 		if [ -f devx/usr/lib/shim/mmx64.efi.signed ]; then
 			cp -f devx/usr/lib/shim/mmx64.efi.signed /tmp/grub2/EFI/boot/mmx64.efi
 		else
@@ -434,18 +463,18 @@ for e in "$NAME" \
 		"$NAME - RAM only - no pupsave" \
 		"$NAME - Ram Disk Shell" ; do
 		case "$e" in
-			"$NAME")opt='pfix=fsck' ;;
-			*"- Copy"*)opt='pfix=fsck,copy' ;;
-			*"- Don't copy"*)opt='pfix=fsck,nocopy' ;;
-			*"- Force xorgwizard"*)opt='pfix=xorgwizard,fsck'; gandl=no ;;
-			*"- No X"*)opt='pfix=nox,fsck' ;;
-			*"- No Kernel Mode"*)opt='nomodeset pfix=fsck'; gandl=no ;;
-			*"- Safe mode"*)opt='pfix=ram,nox,fsck' ;;
-			*"- RAM only"*)opt='pfix=ram,fsck' ;;
-			*"- Ram Disk"*)opt='pfix=rdsh' ;;
+			"$NAME")opt='pfix=fsck,fsckp' ;;
+			*"- Copy"*)opt='pfix=fsck,fsckp,copy' ;;
+			*"- Don't copy"*)opt='pfix=fsck,fsckp,nocopy' ;;
+			*"- Force xorgwizard"*)opt='pfix=fsck,fsckp,xorgwizard'; gandl=no ;;
+			*"- No X"*)opt='pfix=fsck,fsckp,nox' ;;
+			*"- No Kernel Mode"*)opt='nomodeset pfix=fsck,fsckp'; gandl=no ;;
+			*"- Safe mode"*)opt='pfix=fsck,fsckp,ram,nox' ;;
+			*"- RAM only"*)opt='pfix=fsck,fsckp,ram' ;;
+			*"- Ram Disk"*)opt='pfix=fsck,fsckp,rdsh' ;;
 		esac
-		[ "$gandl" = 'no' ] || build_grub2_cfg $BUILD/grub.cfg "$e" "$opt" true
-		[ "$gandl" = 'no' ] || build_grub2_cfg $BUILD/boot/grub/loopback.cfg "$e" "$opt" true
+		[ "$gandl" = 'no' ] || build_grub2_cfg $BUILD/grub.cfg "$e" "$opt"
+		[ "$gandl" = 'no' ] || build_grub2_cfg $BUILD/boot/grub/loopback.cfg "$e" "$opt"
 		build_menu_lst $BUILD/boot/grub/menu.lst "$e" "$opt" true
 		gandl=''
 done
