@@ -140,7 +140,7 @@ artist(){
 		fi
 
 		#arist image
-		TMP="$(wget -q "https://www.allmusic.com/search/artists/${ARTIST// /+}" -O- |  grep -F '<img' | grep -im1 "$ARTIST" | cut -d'"' -f2)"
+		TMP="$(wget -q "https://www.allmusic.com/search/artists/${ARTIST// /+}" -O- |  grep -F '<img' | grep -im1 "$ARTIST" | awk -F '<img' '{print $2}' |cut -d'"' -f2)"
 		wget "$TMP" -O ${WORKDIR}/trackinfo${MYPID}_artist_image_tmp.jpg #wget doesn't overwrite
 		mv -f ${WORKDIR}/trackinfo${MYPID}_artist_image_tmp.jpg ${WORKDIR}/trackinfo${MYPID}_artist_image.jpg
 		#in case anything failed - use fallback image
@@ -159,7 +159,7 @@ artist(){
 		done
 		XML_CONV="$XML"
 		#---
-		grep -F '<release-group id' <<< $XML_CONV | awk -F'id="' '{print $2}' | cut -d'"' -f1 | tac > ${MYDIR}_discography_tmp #reverse order to prefer oldest release
+		grep -F '<release-group id' <<< "$XML_CONV" | awk -F'id="' '{print $2}' | cut -d'"' -f1 | tac > ${MYDIR}_discography_tmp #reverse order to prefer oldest release
 		while read I; do
 			TMP="`grep -FA3 "$I" <<< "$XML_CONV" | grep -F '</title'`" #title
 			TMP1="`grep -FA5 "$I" <<< "$XML_CONV" | grep -Fm1 '</first-release-date'`" #year of release
@@ -335,9 +335,9 @@ pMusic will search for lyrics in')\nelyrics.net\nlyrics.fandom.com\njamendo.com"
 			T=${TITLE%%(*}; T=${T//_/ }; T=${T//-/,,}; T=${T// /-}; T=${T//\'/}; TMP_TITLE="${T,,}"
 			TMP_CHAR=${TMP_ARTIST:0:1} #first char
 			rm $WORKDIR/tmplyrics
-			wget -U "$USERAGENT" -t 3 --connect-timeout=3 -O $WORKDIR/tmplyrics http://www.elyrics.net/read/$TMP_CHAR/$TMP_ARTIST-lyrics/$TMP_TITLE-lyrics.html
-			LYRICS="`cat $WORKDIR/tmplyrics | tr '>' '\n' | grep -B 1000 -m1 'Correct these lyrics' | grep -A 1000 -F "id='inlyr'" | sed 's%<br%%g' | grep -vF '<' | grep -vF 'http' | head -n -3 `"
-			[ "$LYRICS" ] && echo "http://www.elyrics.net/read/$TMP_CHAR/$TMP_ARTIST-lyrics/$TMP_TITLE-lyrics.html" > ${MYDIR}_lyrics_source
+			wget -U "$USERAGENT" -t 3 --connect-timeout=3 -O $WORKDIR/tmplyrics https://www.elyrics.net/read/$TMP_CHAR/$TMP_ARTIST-lyrics/$TMP_TITLE-lyrics.html
+			LYRICS="`cat $WORKDIR/tmplyrics | tr '>' '\n' | grep -B 1000 -m1 'correctlyrics' | grep -A 1000 -F "id='inlyr'" | grep -v -e '^$' | sed 's%<br%%g' | grep -vF '<' | grep -vF 'http' | head -n -3 `"
+			[ "$LYRICS" ] && echo "https://www.elyrics.net/read/$TMP_CHAR/$TMP_ARTIST-lyrics/$TMP_TITLE-lyrics.html" > ${MYDIR}_lyrics_source
 		fi		
 		echo "$LYRICS" > ${MYDIR}_lyrics
 		#save to DB
@@ -658,8 +658,8 @@ track_info (){
 			echo "$YEAR" > ${MYDIR}_YEAR
 		fi
 		#---
-		[ ! "$DISC_ID" ] && export DISC_ID="`echo "$XML_CONV" | grep -FA2 '<release-group' | grep -im1 -B2 -F "${ALBUM}<" | grep -F 'id=' | awk -F 'id=' '{print $2}' | cut -d'"' -f2`" #note "${ALBUM}<" where < defines the end of album-string
-		[ ! "$DISC_ID" ] && export DISC_ID="`echo "$XML_CONV" | grep -FA2 '<release-group' | grep -im1 -B2 -F "${ALBUM}" | grep -F 'id=' | awk -F 'id=' '{print $2}' | cut -d'"' -f2`"
+		[ ! "$DISC_ID" ] && export DISC_ID="`echo "$XML_CONV" | grep -FA2 '<release-group' | grep -i -B2 -F "${ALBUM}<" | grep -F 'id=' | awk -F 'id=' '{print $2}' | cut -d'"' -f2 | sort | uniq -c | sort -nr | head -n1 | awk '{print $2}'`" #note "${ALBUM}<" where < defines the end of album-string
+		[ ! "$DISC_ID" ] && export DISC_ID="`echo "$XML_CONV" | grep -FA2 '<release-group' | grep -i -B2 -F "${ALBUM}" | grep -F 'id=' | awk -F 'id=' '{print $2}' | cut -d'"' -f2 | sort | uniq -c | sort -nr | head -n1 | awk '{print $2}'`"
 		[ ! "$ARTIST_ID" ] && export ARTIST_ID="`echo "$XML_CONV" | grep -Fm1 'artist id=' | awk -F 'artist id=' '{print $2}' | cut -d'"' -f2`"
 		echo "$DISC_ID" > ${MYDIR}_DISC_ID #used by albumart_refresh
 		#save disc_id if we are sure it's the correct album. Do NOT save id3 tags. This must be chosen by user.
