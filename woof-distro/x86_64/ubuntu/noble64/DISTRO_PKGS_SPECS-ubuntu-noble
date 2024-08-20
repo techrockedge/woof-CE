@@ -76,6 +76,7 @@ no|cdparanoia|cdparanoia,libcdparanoia0,libcdparanoia-dev|exe,dev,doc,nls
 no|cgpt|cgpt|exe>dev,dev,doc,nls||deps:yes
 no|cifs-utils|cifs-utils|exe,dev,doc,nls
 yes|claws-mail-deps|libetpan-dev|exe,dev,doc,nls||deps:yes
+yes|ClipIt||exe
 yes|connman|connman|exe,dev,doc,nls||deps:yes
 no|copy-fast||exe,doc,nls
 yes|coreutils|coreutils|exe,dev,doc,nls||deps:yes
@@ -564,7 +565,7 @@ no|pulseaudio|pulseaudio,libpulse-mainloop-glib0,libpulse0,libpulse-dev,libwebrt
 no|psynclient||exe
 no|pupmixer||exe
 no|Pup-Kview||exe
-no|Pup-SysInfo||exe
+yes|Pup-SysInfo||exe
 no|puppy_icon_theme||exe #gtk theme
 no|puppy-podcast-grabber||exe
 no|pure-ftpd||exe
