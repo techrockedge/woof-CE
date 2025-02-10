@@ -10,7 +10,7 @@ PupMenu-6.3.1|PupMenu|6.3.1||Utility|429K||PupMenu-6.3.1.pet||Find, launch or ed
 Qemu_Control_Center-0.7|Qemu_Control_Center|0.7||System|44K||Qemu_Control_Center-0.7.pet||PC Emulator||||
 SaveFolderBackup-1.2|SaveFolderBackup|1.2||Utility|44K||SaveFolderBackup-1.2.pet||Save folder backup and restore||||
 UrxvtControl-1.4|UrxvtControl|1.4||Utility|76K||UrxvtControl-1.4.pet||Urxvt configuration||||
-YASSM-4.5|YASSM|4.5||Network|72K||YASSM-4.5.pet||Mounts Samba shares||||
+YASSM-4.8|YASSM|4.8||Network|56K||YASSM-4.8.pet||Mounts Samba shares||||
 acpid-busibox-4|acpid-busibox|4||BuildingBlock|120K||acpid-busibox-4.pet||acpi deamon with dialog box and lid supend||||
 bbwireless-0.1-noarch|bbwireless|0.1-noarch||Network|88K||bbwireless-0.1-noarch.pet||BBwireless network manager||||
 bones-0.2.2|bones|0.2.2||Develop|44K||bones-0.2.2.pet|+gtkdialog3,+openssh,+wget,+gftp,+xdelta3|simple project version control||||
@@ -86,9 +86,10 @@ firmware_usbserial-170511|firmware_usbserial|170511||BuildingBlock|32||firmware_
 firmware_zd1201-170511|firmware_zd1201|170511||BuildingBlock|164K||firmware_zd1201-170511.pet||firmware||||
 fix_pi_overscan-0.3-rpi_all|fix_pi_overscan|0.3-rpi_all||Desktop|68K||fix_pi_overscan-0.3-rpi_all.pet||Pi Overscan or Underscan||||
 frisbee-1.4.4|frisbee|1.4.4||Network|280K||frisbee-1.4.4.pet|+gtkdialog&ge0.8.4|Frisbee network manager||||
-frugalpup-41|frugalpup|41||Setup|3280K||frugalpup-41.pet||FrugalPup - flexible frugal installer||||
+frugalpup-44|frugalpup|44||Setup|3280K||frugalpup-44.pet||FrugalPup - flexible frugal installer||||
 get_libreoffice-0.43|get_libreoffice|0.43||Document|82K||get_libreoffice-0.43.pet||Get LibreOffice download and install LibreOffice||||
 grub2_efi-2.02.2018.08-fd64|grub2_efi|2.02.2018.08-fd64||BuildingBlock|5588||grub2_efi-2.02.2018.08-fd64.pet||No description provided||||
+grub2config-2.1.1|grub2config|2.1.1||Setup|3364K||grub2config-2.1.1.pet||Grub2 bootloader config||||
 grub4dos-0.4.4.v1.9.4|grub4dos|0.4.4.v1.9.4||System|480K||grub4dos-0.4.4.v1.9.4.pet||Grub4Dos bootloader config||precise||
 grub4dos_u-0.4.4.v1.9.4|grub4dos_u|0.4.4.v1.9.4||System|476K||grub4dos_u-0.4.4.v1.9.4.pet||Grub4Dos bootloader config||||
 gtk_theme_ShallowThought-0.2|gtk_theme_ShallowThought|0.2||BuildingBlock|224K||gtk_theme_ShallowThought-0.2.pet||gtk desktop theme||||
@@ -175,7 +176,6 @@ peasyglue-2.0|peasyglue|2.0||Graphic|68K||peasyglue-2.0.pet||Image joiner||||
 peasypdf-4.2|peasypdf|4.2||Document|56K||peasypdf-4.2.pet||Manipulate PDF documents||||
 peasyport-2.8w|peasyport|2.8w||BuildingBlock|48||peasyport-2.8w.pet||No description provided||||
 peasyprint-3.0|peasyprint|3.0||Graphic|48K||peasyprint-3.0.pet||PeasyPrint graphic/photo printing||||
-peasyscale-2.0|peasyscale|2.0||Graphic|68K||peasyscale-2.0.pet||graphic resizer|slackware|14.0||
 peasyscan-2.12|peasyscan|2.12||Graphic|172K||peasyscan-2.12.pet||PeasyScan simple image scanner|slackware|14.0||
 peasywifi-4.5|peasywifi|4.5||Network|136K||peasywifi-4.5.pet||Reliable WiFi connection manager|slackware|14.0||
 pequalizer-1.0.0|pequalizer|1.0.0||Multimedia|76K||pequalizer-1.0.0.pet|+alsaequal,+caps|pequalizer Graphical Equalizer||||

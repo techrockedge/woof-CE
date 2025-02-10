@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # pupsave-backup 1.2.1
-#
+# fredx181 modifications 2025-01-24
 
 #set -x
 
@@ -144,19 +144,68 @@ function PBKP_validate_BACKUP_location() { # $PBKP_BACKUP_PATH
 #---
 
 function compression_dialog() {
-	/usr/lib/gtkdialog/box_yesno "Pupsave Backup-Compress" "Do you want to compress the backup ${destfile} ?
+	/usr/lib/gtkdialog/box_yesno --extra-button "Quit" --extra-icon "gtk-quit" "Pupsave Backup-Compress" "Do you want to compress the backup ${destfile} ?
 
-May take a bit longer but save some space."
-	if [ $? -eq 0 ] ; then
-		/usr/lib/gtkdialog/box_yesno --yes-label "gzip" --no-label "xz" --yes-icon "gtk-execute" --no-icon "gtk-execute" \
-		"Pupsave Backup-Compress" "Select compression type: 'gzip' or 'xz'"
-		if [ $? -eq 0 ] ; then
-			TAROPT="-z"
-			TAREXT='tar.gz'
-		else
-			TAROPT="-J"
-			TAREXT='tar.xz'
-		fi
+May take a bit longer but save some space.
+
+Note: Compressed pupsave backups must be decompressed to be usable.
+
+'Quit', or closing this window, will stop the backup procedure completely."
+ret=$?
+	if [ $ret -eq 0 ] ; then
+export CDIALOG='
+<window width-request="380" title="Pupsave Backup-Compress">
+<vbox>
+<text>
+<label>"   Select compression type: 'GZIP' or 'XZ'
+"</label>
+</text>
+  <hbox>
+   <button>
+      <label>"    GZIP    "</label>
+      <action>EXIT:GZIP</action>
+    </button>
+   <button>
+      <label>"    XZ    "</label>
+      <action>EXIT:XZ</action>
+    </button>
+<button>
+<label>'Quit'</label>
+<input file stock="gtk-quit"></input>
+<action type="exit">exit</action>
+</button>
+  </hbox>
+ </vbox>
+ </window>
+'
+COMP="`gtkdialog --center --program=CDIALOG`"
+if [ "$(echo "$COMP" | grep "XZ")" ]; then
+echo XZ
+TAROPT="-J"
+TAREXT='tar.xz'
+elif [ "$(echo "$COMP" | grep "GZIP")" ]; then
+echo GZIP
+TAROPT="-z"
+TAREXT='tar.gz'
+else
+echo exit
+cleanup
+exit
+fi
+
+
+#		/usr/lib/gtkdialog/box_yesno --yes-label "gzip" --no-label "xz" --yes-icon "gtk-execute" --no-icon "gtk-execute" \
+#		"Pupsave Backup-Compress" "Select compression type: 'gzip' or 'xz'"
+#		if [ $? -eq 0 ] ; then
+#			TAROPT="-z"
+#			TAREXT='tar.gz'
+#		else
+#			TAROPT="-J"
+#			TAREXT='tar.xz'
+#		fi
+	elif [ $ret -gt 1 ] ; then
+cleanup
+exit
 	fi
 }
 
@@ -181,7 +230,7 @@ Click 'OK' to save session to save${type} and proceed with the backup...
 
 Backup file name: ${destfile}"
 		if [ $? -eq 0 ] ; then
-			show_splash "Saving session to save${type} ..."
+			show_splash "Saving your current session to save${type}, before creating backup  ..."
 			snapmergepuppy
 			kill $pidx
 		else
@@ -193,16 +242,23 @@ Backup file name: ${destfile}"
 	sync
 	sleep 0.5
 	CWDIR=$PWD
-   
+ 
+### fredx181 2025-01-24 when create compressed backup of savefolder it will be with BKP.<timestamp> added to the name inside the archive  
 	if [ "$SAVEFOLDER" ] ; then
 		compression_dialog #set TAROPT TAREXT
+		cdestfile=$(basename "${destfile}")
+		bdestfile=${1##*/}
 		[ "$TAROPT" ] && destfile=${destfile}.${TAREXT}
 		show_splash "Creating $PBKP_BACKUP_PATH/${destfile##*/} ..."
 		if [ "$TAROPT" ] ; then
-			cd ${1%/*} # dirname $PBKP_PUPSAVE_PATH
+			cd ${1%/*} # dirname $PBKP_PUPSAVE_PATH			
 			#basename destifile / basename $PBKP_PUPSAVE_PATH
-			echo ; echo "tar -c ${TAROPT} -f $PBKP_BACKUP_PATH/${destfile##*/} ${1##*/}/" #debug
-			tar -c ${TAROPT} -f $PBKP_BACKUP_PATH/${destfile##*/} ${1##*/}/
+#			echo ; echo "tar -c ${TAROPT} -f $PBKP_BACKUP_PATH/${destfile##*/} ${1##*/}/" #debug		
+#			tar -c ${TAROPT} -f $PBKP_BACKUP_PATH/${destfile##*/} ${1##*/}/
+
+### with BKP.<timestamp> added to name inside the archive
+echo ; echo "tar -c ${TAROPT} --transform='flags=r;s|'${bdestfile}'|'${cdestfile}'|' -f $PBKP_BACKUP_PATH/${destfile##*/} ${bdestfile}/" #debug
+tar -c ${TAROPT} --transform='flags=r;s|'${bdestfile}'|'${cdestfile}'|' -f $PBKP_BACKUP_PATH/${destfile##*/} ${bdestfile}/			
 			RETVAL=$?
 			cd "$CWDIR"
 			sync
@@ -246,9 +302,20 @@ Backup file name: ${destfile}"
 	mv /etc/xloadedx /root/.XLOADED
 	sync
 	if [ $RETVAL -eq 0 ] ; then
+  if [ "$TAROPT" ]; then
+		/usr/lib/gtkdialog/box_ok "Pupsave Backup" complete "Save${type} Backup Completed:
+
+${destfile}
+
+To make it usable as pupsave to choose at boot:
+Extract and place ${cdestfile} in:
+$PBKP_BACKUP_PATH"
+  else
 		/usr/lib/gtkdialog/box_ok "Pupsave Backup" complete "Save${type} Backup Completed:
 
 ${destfile}"
+  fi
+
 	else
 		rm -rf $destfile
 		/usr/lib/gtkdialog/box_ok "Pupsave Backup" error "Error(s) creating $destfile"

@@ -17,6 +17,8 @@ FALLBACKS_COMPAT_VERSIONS='14.2'
 #but, exclude any 'gcc-4.3-doc*' matches...
 #yes|gcc|gcc,gcc-4.3*,-gcc-4.3-doc*|exe,dev,doc,nls
 
+PETBUILDS="busybox-void aaa_pup_c gtkdialog rox-filer puppy_flat_icons puppy_standard_icons gtk_theme_flat_grey_rounded gtk_theme_gradient_grey gtk_theme_polished_blue xdg-puppy-jwm firewallstatus powerapplet_tray mtpaint xlockmore"
+
 PKGS_SPECS_TABLE='
 no|915resolution||exe,dev,doc,nls
 yes|a52dec||exe,dev,doc,nls
@@ -214,7 +216,7 @@ yes|jasper|jasper,libjasper|exe,dev,doc,nls
 yes|jbigkit-libs|jbigkit-libs|exe,dev,doc,nls
 yes|json-glib|json-glib|exe,dev,doc,nls
 yes|judy|judy|exe>dev,dev,doc,nls
-no|jwm|jwm|exe,dev,doc,nls						# petbuild
+yes|jwm|jwm,libdav1d|exe,dev,doc,nls
 yes|keyutils|keyutils|exe,dev,doc,nls
 yes|kernel_headers_musl||exe>dev
 yes|kmod|kmod,libkmod|exe,dev,doc,nls
@@ -340,7 +342,7 @@ yes|libxml2|libxml2|exe,dev,doc,nls
 yes|libxshmfence|libxshmfence|exe,dev,doc,nls
 yes|libxslt|libxslt|exe,dev,doc,nls
 yes|libyaml|libyaml|exe>dev,dev,doc,nls
-yes|llvm-cut|libllvm18|exe,dev>null,doc,nls
+yes|llvm-cut|libllvm19,libz3|exe,dev>null,doc,nls
 yes|lvm2|lvm2|exe,dev,doc,nls
 yes|lz4|lz4|exe,dev,doc,nls
 yes|lzlib|lzlib|exe,dev,doc,nls
@@ -350,7 +352,7 @@ yes|m4|m4|exe>dev,dev,doc,nls
 yes|make|make|exe>dev,dev,doc,nls
 no|man|man|exe>dev,dev,doc,nls
 yes|mariadb|mariadb,liburing|exe>dev,dev,doc,nls
-yes|mesa|mesa,mesa-dri,libglvnd,glew,glu,lm_sensors,glxinfo|exe,dev,doc,nls
+yes|mesa|mesa,mesa-dri,mesa-libgallium,libglvnd,glew,glu,lm_sensors,glxinfo|exe,dev,doc,nls
 no|metamail|metamail|exe,dev>null,doc,nls
 no|mhwaveedit||exe,dev,nls
 yes|mirdir||exe,dev,doc,nls
