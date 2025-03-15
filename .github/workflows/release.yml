@@ -46,7 +46,7 @@ on:
         description: 'Build environment'
         options:
           - ubuntu-22.04
-          - ubuntu-20.04
+          - ubuntu-24.04
         default: 'ubuntu-22.04'
 
 jobs:

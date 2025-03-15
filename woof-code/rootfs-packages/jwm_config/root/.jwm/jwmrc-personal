@@ -33,6 +33,8 @@
 <!-- <Option>tiled</Option> -->
 <!-- auto-maximization when moving window to top/side of desktop -->
 <!-- <Option>aerosnap</Option> -->
+<Class>Savebox</Class>
+<Option>width:500</Option>
 </Group>
 
 <!-- Key bindings -->
