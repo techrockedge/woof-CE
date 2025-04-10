@@ -11,7 +11,7 @@ jobs:
         include:
           - arch: x86_64
             compat-distro-version: voidpup64
-            kernel: 6.6.x
+            kernel: 6.1.x
           - arch: x86
             compat-distro-version: voidpup32
             kernel: 6.1.x
@@ -20,6 +20,7 @@ jobs:
     with:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
+      runner: ubuntu-22.04
       arch: ${{ matrix.arch }}
       compat-distro: void
       compat-distro-version: ${{ matrix.compat-distro-version }}

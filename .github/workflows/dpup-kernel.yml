@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     if: github.event_name != 'schedule' || (github.repository == 'puppylinux-woof-CE/woof-CE' && github.ref == 'refs/heads/testing')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
       image: debian:${{ matrix.release }}-slim
       volumes:
@@ -46,7 +46,7 @@ jobs:
           [ ${{ matrix.arch }} != x86 ] || dpkg --add-architecture i386
           apt-get update -qq
           apt-get upgrade -y
-          apt-get install -y --no-install-recommends curl wget ca-certificates git file squashfs-tools xz-utils diffutils patch make flex bison python3 bc bzip2 kmod rsync libelf-dev libssl-dev dwarves gcc jq
+          apt-get install -y --no-install-recommends curl wget ca-certificates git file squashfs-tools xz-utils zstd diffutils patch make flex bison python3 bc bzip2 kmod rsync libelf-dev libssl-dev dwarves gcc jq
           apt-get install -y linux-source
           [ ${{ matrix.arch }} != x86 ] || apt-get install -y --no-install-recommends gcc-multilib `dpkg --get-selections | grep -m1 ^linux-config- | awk '{print $1}' | sed s/amd64/i386/`
           curl https://raw.githubusercontent.com/puppylinux-woof-CE/initrd_progs/master/pkg/w_apps_static/w_apps/vercmp.c | gcc -x c -o /usr/local/bin/vercmp -

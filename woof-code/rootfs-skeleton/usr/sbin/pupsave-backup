@@ -1,5 +1,254 @@
-#!/bin/bash
-#
+#! /bin/bash
+#pupsave-backup 1.3
+#wizard modifications 2025-04-02
+#added save-restore function, lines 7-250
+#added four words to backup section dialogs to reference restore function
+
+#create function for restore, function ends at line 232
+function save-restore() {
+
+#create function for progress bars
+function pbar() {
+SEC=0; MIN=0
+while [ 1 ]; do
+ echo $((SEC*10/6))
+ echo "#$MIN min $SEC sec"
+ sleep 1
+ ((SEC++))
+ [ $SEC -eq 60 ] && SEC=0 && ((MIN++))
+done | yad --title="Wait" \
+  --center \
+  --progress \
+  --text="Restore...time" \
+  --width=400 \
+  --no-buttons &
+PID=$!
+}	
+#end pbar function
+
+yad --title "Restore Pupsave Backup" \
+    --center \
+    --width=400 \
+    --text "This program can restore :
+-Pupsave Backups, compressed or un-compressed savefiles
+ or savefolders
+
+Your Pupsave Backups must be in the same directory
+as your savefile or savefolder.
+This is normally the main Puppy install directory,
+but can be other locations if your system is 
+configured to use them.
+
+Be certain you have enough space on your 
+drive partition to hold the restore.
+
+When you reboot you will see a personal file 
+choice menu that list the restored backup." \
+--button=OK:1 \
+--button=Cancel:0 \
+
+#exit if cancel
+ret=$?
+if [ $ret == 0 ]; then
+    exit
+fi
+
+#get install directory
+source /etc/rc.d/PUPSTATE
+pupdir="/mnt/home$PSUBDIR"
+cd $pupdir
+
+#create list of .BKP backups
+rm backups.txt
+ls | grep -F ".BKP" >> $pupdir/backups.txt
+
+#list backups to select
+yad --title "Restore Backup, select & wait for complete message" \
+    --width=550 \
+    --height=150 \
+    --center \
+    --button=OK:1 \
+    --button=Cancel:0 \
+    --list \
+    --column="Backups" < $pupdir/backups.txt \
+    --select-action="echo">restorefile.txt 
+   
+#exit if cancel
+ret=$?
+if [ $ret == 0 ]; then
+    exit
+fi    
+
+#set restore file selected    
+restorefile=$(cat restorefile.txt)
+rm restorefile.txt
+
+#get restore file date
+date0=${restorefile%-*}
+fdate=${date0##*-}
+
+#user add to restore name
+add=( $(yad --form --title="Add To Name" \
+--center \
+--text="You can add to the restore file or folder name 
+Keep it short and don't use spaces" \
+--separator=' '  \
+--button="OK":2 \
+--button="Skip":0 \
+--field="Add to name" \ ))
+
+ret=$?
+
+addname=-$add
+
+if [ $ret == 0 ]; then
+    addname=""
+fi
+
+#Code for un-compressed
+#get file system type 
+if [[ "$restorefile" == *"2fs"* ]]; then
+    ftype=.2fs
+  elif [[ "$restorefile" == *"3fs"* ]]; then
+    ftype=.3fs
+  elif [[ "$restorefile" == *"4fs"* ]]; then
+    ftype=.4fs
+  else
+     ftype=""
+fi
+
+if [[ ! $restorefile == *".tar"* ]];then
+    #get distro file name
+    fname=`echo "$restorefile" | cut -d'.' -f1`
+       
+   #copy file to new name
+   bkpname=$fname-$fdate-RESTORED$addname$ftype
+   
+   #start progress bar
+   pbar
+   cp -ar $restorefile $pupdir/$bkpname 
+   #sync data copy
+   sync
+   #end progress bar
+   kill $PID 
+   
+   yad --title "Restore Complete" \
+    --width=250 \
+    --height=150 \
+    --center \
+    --button=OK \
+    --text "Restore is named:
+$bkpname
+
+You must reboot to use" 
+      exit  
+ fi 
+#End code for un-compressed
+
+#start progress bar
+pbar
+#extract compressed file to extracted dir
+rm -r extracted
+mkdir extracted
+tar -xf $restorefile -C extracted
+
+#move renamed backup to install dir
+cd extracted
+extractedbkp=$(ls)
+ 
+#test if extract is file or dir
+if [ -d "$pupdir/extracted/"$extractedbkp"" ]; then
+   mv $extractedbkp $pupdir/"$extractedbkp"-$fdate-RESTORED$addname
+#sync data copy
+sync
+#end progress bar
+kill $PID
+  
+  yad --title "Restore Complete" \
+    --width=250 \
+    --height=150 \
+    --center \
+    --button=OK \
+    --text "Restore is named:
+"$extractedbkp"-$fdate-RESTORED$addname
+
+You must reboot to use" \
+
+#delete temporary files/dir
+     rm -r $pupdir/extracted
+     rm $pupdir/backups.txt
+     exit
+  else
+  echo "Backup is a savefile"
+fi
+
+#Backup is a savefile
+#get distro file namme
+fname=`echo "$extractedbkp" | cut -d'.' -f1`
+
+#get file system type
+if [[ "$extractedbkp" == *"2fs"* ]]; then
+    ftype=.2fs
+  elif [[ "$extractedbkp" == *"3fs"* ]]; then
+    ftype=.3fs
+  elif [[ "$extractedbkp" == *"4fs"* ]]; then
+    ftype=.4fs
+  else
+    yad  --title "Restore Fail" \
+     --button=OK \
+     --text "File is not a Linux file system,
+Exiting" 
+    #delete temporary files/dir
+   rm -r $pupdir/extracted
+   rm $pupdir/restorefile.txt
+   rm $pupdir/backups.txt    
+   exit  #quit if file is not a xfs
+fi
+
+#move restored file
+bkpname=$fname-$fdate-RESTORED$addname$ftype
+mv $extractedbkp $pupdir/$bkpname
+#sync data copy
+sync 
+#end progress bar
+kill $PID
+
+yad --title "Restore Complete" \
+    --width=250 \
+    --height=150 \
+    --center \
+    --button=OK \
+    --text "Restore is named:
+"$bkpname"
+
+You must reboot to use" \
+
+#delete temporary files/dir
+rm -r $pupdir/extracted
+rm $pupdir/backups.txt
+
+exit 
+}
+#end save-restore function
+
+yad --title "Backup or Restore" \
+--center \
+--button="Pupsave Backup":1 \
+--button="Pupsave Restore":0 \
+--button=Cancel:2 \
+--text "
+Choose if you want to Backup or Restore your Puppy
+
+"
+#do choice
+ret=$?
+if [ $ret == 2 ]; then
+     exit
+   elif [ $ret == 0 ]; then
+     save-restore
+     exit
+fi
+
 # pupsave-backup 1.2.1
 # fredx181 modifications 2025-01-24
 
@@ -18,7 +267,7 @@ help_box() {
 
 <b>3)</b> Pupsave Backup backs up your system configuration as it exists in the pupsave. <span foreground='"'red'"'>It will not backup data stored outside the pupsave.</span>
 
-To restore a backup, rename the file by removing the 
+To manually restore a backup, rename the file by removing the 
 <b>.BKP-xxxx.xx.xx-xx.xx</b> file extension.
 
 You can force the init script to not ignore pupsaves created by this script by adding a boot parameter: pfix=psavebkp
@@ -308,7 +557,7 @@ tar -c ${TAROPT} --transform='flags=r;s|'${bdestfile}'|'${cdestfile}'|' -f $PBKP
 ${destfile}
 
 To make it usable as pupsave to choose at boot:
-Extract and place ${cdestfile} in:
+Run restore or extract and place ${cdestfile} in:
 $PBKP_BACKUP_PATH"
   else
 		/usr/lib/gtkdialog/box_ok "Pupsave Backup" complete "Save${type} Backup Completed:

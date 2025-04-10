@@ -40,7 +40,7 @@ peasyglue-2.2|peasyglue|2.2||Graphic|68K||peasyglue-2.2.pet||Image joiner||||
 peasypdf-5.2|peasypdf|5.2||Document|36K||peasypdf-5.2_bw.pet||Manipulate PDF documents||||
 peasyport-3.2|peasyport|3.2||Network|36K||peasyport-3.2_bw64.pet||Network port scanner|debian|bookworm||
 peasyprint-4.4|peasyprint|4.4||Graphic|108K||peasyprint-4.4_bw64.pet||Graphic/photo printing|debian|bookworm||
-peasyscale-2.3|peasyscale|2.3||Graphic|56K||peasyscale-gtk3_2.3_bw64.pet||Graphic resizer|debian|bookworm||
+peasyscale_64bit-3.2|peasyscale_64bit|3.2||Graphic|100K||peasyscale_64bit-3.2.pet||and more|debian|bookworm||
 picom-9.1|picom|9.1||BuildingBlock|1080K||picom-9.1-x86_64.pet||X-compositor|debian|bookworm||
 picom-gtk-1.0|picom-gtk|1.0||Desktop|188K||picom-gtk-1.0.pet||A X compositor settings||||
 pRun-1.7.2|pRun|1.7.2||Utility|164K||pRun-1.7.2.pet||Run dialog utility||||
