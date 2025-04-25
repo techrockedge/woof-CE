@@ -17,3 +17,5 @@ jobs:
       kernel: ubuntu-noble
       artifact: ${{ github.workflow }}-${{ github.run_number }}
       retention: 16
+      runner: 'ubuntu-22.04'
+      

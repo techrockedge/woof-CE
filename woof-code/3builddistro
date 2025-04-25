@@ -61,7 +61,7 @@ mkdir -p sandbox3
 echo
 echo "Now building sandbox3/rootfs-complete, with the complete filesystem..."
 if [ -n "$GITHUB_ACTIONS" ]; then
-	echo '#!/bin/sh -x' > sandbox3/pinstall.sh
+	echo '#!/bin/bash -x' > sandbox3/pinstall.sh
 else
 	echo '#!/bin/sh' > sandbox3/pinstall.sh
 fi
@@ -538,6 +538,7 @@ cd $WKGDIR/sandbox3/rootfs-complete
 [ "$DISTRO_BINARY_COMPAT" = "void" ] && [ $CROSSBUILD -eq 0 -o -n "$QEMU" ] && chroot . ldconfig
 $WKGDIR/sandbox3/pinstall.sh
 ( ### new {a,f,y}drv stuff - execute the '{a,f,y}pinstall.sh'
+
 	cd $WKGDIR/sandbox3/
 	for post_inst in adrv fdrv ydrv;do
 		[ -d "$post_inst" ] || continue
