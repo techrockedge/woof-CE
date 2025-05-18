@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # sandbox3 or $PX $BUILD
 #
