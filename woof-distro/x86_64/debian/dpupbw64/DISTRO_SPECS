@@ -1,7 +1,7 @@
 #One or more words that identify this distribution:
 DISTRO_NAME='BookwormPup64'
 #version number of this distribution:
-DISTRO_VERSION=10.0.10
+DISTRO_VERSION=10.0.11
 #The distro whose binary packages were used to build this distribution:
 DISTRO_BINARY_COMPAT='debian'
 #Prefix for some filenames: exs: dpup64bw.2fs, dpup64bw-10.0.sfs
@@ -18,15 +18,15 @@ DISTRO_DB_SUBNAME='bookworm'
 WOOF_VERSION=9
 DISTRO_TARGETARCH='x86_64'
 NO_MULTIARCH_SYMLINK=1
-BUILD_FROM_WOOF='testing;880a8385d;2025-02-12 09:46:28 +0000'
+BUILD_FROM_WOOF='testing;a07eeb774;2025-05-18 17:19:42 +0100'
 #Puppy default filenames...
 #Note, the 'SFS' files below are what the 'init' script in initrd.gz searches for,
 #for the partition, path and actual files loaded, see PUPSFS and ZDRV in /etc/rc.d/PUPSTATE
-DISTRO_BDRVSFS='bdrv_dpupbw64_10.0.10.sfs'
-DISTRO_PUPPYSFS='puppy_dpupbw64_10.0.10.sfs'
-DISTRO_ZDRVSFS='zdrv_dpupbw64_10.0.10.sfs'
-DISTRO_FDRVSFS='fdrv_dpupbw64_10.0.10.sfs'
-DISTRO_ADRVSFS='adrv_dpupbw64_10.0.10.sfs'
-DISTRO_YDRVSFS='ydrv_dpupbw64_10.0.10.sfs'
-DISTRO_PUPPYDATE='Feb 2025'
+DISTRO_BDRVSFS='bdrv_dpupbw64_10.0.11.sfs'
+DISTRO_PUPPYSFS='puppy_dpupbw64_10.0.11.sfs'
+DISTRO_ZDRVSFS='zdrv_dpupbw64_10.0.11.sfs'
+DISTRO_FDRVSFS='fdrv_dpupbw64_10.0.11.sfs'
+DISTRO_ADRVSFS='adrv_dpupbw64_10.0.11.sfs'
+DISTRO_YDRVSFS='ydrv_dpupbw64_10.0.11.sfs'
+DISTRO_PUPPYDATE='May 2025'
 DISTRO_ARCHDIR='x86_64-linux-gnu'
