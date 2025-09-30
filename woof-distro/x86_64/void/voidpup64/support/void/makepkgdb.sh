@@ -24,15 +24,18 @@ do
   sha256=`[ -e ${meta} ] && sha256sum ${meta} | cut -d ' ' -f 1`
   vpkg="<key>${vpkg}</key>"
   begnum=`grep -n $vpkg $repo | head -1 | cut -d : -f 1`
-  finnum=`tail -n +"$begnum" $repo | grep -n "<key>source-revisions" | head -1 | cut -d : -f 1`
-  finnum=`expr $begnum + $finnum + 1`
+  mednum=`tail -n +"$begnum" $repo | grep -n "<key>source" | head -1 | cut -d : -f 1`
+  mednum=`expr $begnum + $mednum - 1`
+  finnum=`tail -n +"$mednum" $repo | grep -n "</dict>" | head -1 | cut -d : -f 1`
+  finnum=`expr $mednum + $finnum - 1`
 
   sed -n "${begnum},${finnum}p" $repo > tmpout
   sed -i '/<key>filename-sha256/i \\t\t<key>automatic-install</key>\n\t\t<true/>' tmpout
   sed -i '/<key>installed_size/i \\t\t<key>install-date</key>\n\t\t<string>2021-12-01 10:00 UTC</string>' tmpout
   [ ${sha256} ] && sed -i "/<key>pkgver/i \\\t\t<key>metafile-sha256</key>\n\t\t<string>${sha256}</string>\n\t\t<key>pkgname</key>\n\t\t<string>acl</string>" tmpout
   sed -i '/<key>run_depends/i \\t\t<key>repository</key>\n\t\t<string>https://repo-us.voidlinux.org/current</string>' tmpout
-  sed -i '/<\/dict>/i \\t\t<key>state</key>\n\t\t<string>installed</string>' tmpout
+  insnum=`grep -n "</dict>" tmpout | tail -1 | cut -d : -f 1`
+  sed -i "${insnum}i \\\t\t<key>state</key>\n\t\t<string>installed</string>" tmpout
     
   cat tmpout >> out
 

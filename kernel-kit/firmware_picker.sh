@@ -108,7 +108,13 @@ do
 							cp -L -n $SRC_FW_DIR/${fw%\-*}-${c}.${fw#*\.} $FIRMWARE_RESULT_DIR
 							fw_msg ${fw%\-*}-${c}.${fw#*\.} $fw_tmp_list # log to zdrv
 							break
-						else
+						#### THIS HAS BEEN ADDED TO FIX IWLWIFI FIRMWARE DIRECTORY CHANGE 250906
+						elif [ -e "$SRC_FW_DIR/intel/iwlwifi/${fw%\-*}-${c}.${fw#*\.}" ];then
+							cp -L -n $SRC_FW_DIR/intel/iwlwifi/${fw%\-*}-${c}.${fw#*\.} $FIRMWARE_RESULT_DIR
+							fw_msg ${fw%\-*}-${c}.${fw#*\.} $fw_tmp_list # log to zdrv
+							break
+						#### END OF ADDITION
+	 					else
 							fw_msg "${fw} missing" $fw_tmp_list # log to zdrv
 							c=$(($c - 1))
 						fi

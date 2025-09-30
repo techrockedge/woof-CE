@@ -1,5 +1,6 @@
 #!/bin/sh
 
+dridir=`pwd`
 for i in $PLIBDIRS # $PLIBDIRS is exported in 2createpackages
 do
 	[ -d $i ] || continue
@@ -14,4 +15,6 @@ do
 	if [ -f ${i}/gallium-pipe/pipe_vmwgfx.so ] ; then
 		rm -fv ${i}/pipe_vmwgfx.so
 	fi
+	#dri *.so symlinks have been moved to _DEV - move them back
+	mv ${dridir}_DEV/${i}/dri/*.so ${dridir}/${i}/dri
 done

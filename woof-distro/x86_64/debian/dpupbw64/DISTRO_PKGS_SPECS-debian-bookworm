@@ -49,6 +49,7 @@ yes|acl|libacl1|exe,dev,doc,nls||deps:yes
 yes|adduser|adduser|exe,dev,doc,nls
 yes|alsa-lib|libasound2,libasound2-data,libasound2-dev,alsa-topology-conf,alsa-ucm-conf|exe,dev,doc,nls||deps:yes
 yes|alsa-utils|alsa-utils|exe,dev,doc,nls||deps:yes
+yes|android-file-transfer|android-file-transfer|exe,dev,doc,nls||deps:yes
 yes|atk|libatk1.0-0,libatk1.0-dev|exe,dev,doc,nls||deps:yes
 yes|at-spi2-atk|libatspi2.0-0,libatk-bridge2.0-0,libatk-bridge2.0-dev,libatspi2.0-dev|exe,dev,doc,nls||deps:yes #needed by gtk+3.
 yes|base-files|base-files|exe>null,dev>null,doc>null,nls>null
@@ -375,6 +376,7 @@ yes|vobcopy|vobcopy|exe,dev,doc,nls #pburn dependency
 yes|wmctrl|wmctrl|exe,dev,doc,nls
 #
 #Packages defined in Packages-puppy-dpup64-extra
+yes|arandr||exe,dev,doc,nls
 yes|btop||exe,dev,doc,nls
 yes|cdrtools||exe,dev,doc,nls
 yes|cherrytree||exe,dev,doc,nls
