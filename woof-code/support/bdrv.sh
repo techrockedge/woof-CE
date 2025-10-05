@@ -130,6 +130,7 @@ APT::Install-Suggests "false";
 APT::Autoremove::SuggestsImportant "false";
 EOF
 chroot bdrv apt-get update
+chroot bdrv apt modernize-sources -y
 chroot bdrv apt-get upgrade -y
 
 # blacklist packages that may conflict with packages in the main SFS
