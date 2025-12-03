@@ -49,6 +49,8 @@
 
 . /etc/rc.d/PUPSTATE
 
+/usr/lib/gtkdialog/box_ok "Warning" warning "<b>$(gettext 'WARNING!')</b>" " " "$(gettext 'Cannot INSTALL (Load) or QUEUE (to load next boot)')" "$(gettext 'either SYSTEM Files or Files with SPACES in the FILENAME')" "$(gettext 'as YOU WILL LIKELY TRASH YOUR SYSTEM!')" " " "$(gettext 'You can safely VIEW (mount) or unmount them')"
+
 if [ "$PUNIONFS" = "overlay" ] ; then
 	exec sfs_load.overlay "$@"
 fi

@@ -49,6 +49,11 @@ done
 
 [ "$CMD" ] || exit
 
+#test for chromium-based browsers (if true, launch with dbus-launch rather than exec)
+CBB=$(echo "$CMD" | grep -Ei -- 'chrome|chromium|brave|iron|opera|slimjet|vivaldi|microsoft-edge')
+[ -n "${CBB}" ] && EXE=dbus-launch || EXE=exec
+export EXE
+
 USER_HOME=$(awk -F: '$1=="'"${XUSER}"'" {print $6}' /etc/passwd)
 if ! [ "${USER_HOME}" ] ; then
 	echo "$0 ERROR: could not HOME dir for user $XUSER"
@@ -117,7 +122,7 @@ case "'"$CURDIR"'" in
 	cd "'"$CURDIR"'"
 	;;
 esac
-exec '"${SANDBOX}"' '"$CMD"'
+$EXE '"${SANDBOX}"' '"$CMD"'
 '
 else
 	exec ash -c "exec $CMD"

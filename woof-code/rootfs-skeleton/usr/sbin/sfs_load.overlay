@@ -153,7 +153,13 @@ if [ $# -ne 0 ]; then
 			if [ $QUIET -eq 1 ]; then
 				:
 			else
+			. /etc/rc.d/BOOTCONFIG
+			QSFS=$( echo $EXTRASFSLIST | grep $(basename $SFS) )
+			if [ -z "$QSFS" ];then
 				yad --title sfs_load --window-icon=dialog-question --image=dialog-question --text "$(gettext "Do you want to <b>load</b>") ${SFS}?" --form --button="gtk-yes:0" --button="gtk-no:1"
+			else
+			$?=1
+			fi
 			fi
 			if [ $? -eq 0 ]; then
 				FOUND=0
@@ -267,17 +273,6 @@ if [ $# -ne 0 ]; then
 			fi
 		fi
 
-		[ $ASKMOUNT -eq 0 ] && continue
-		yad --title sfs_load --window-icon=dialog-question --image=dialog-question --text "$(gettext "Do you want to <b>mount and view</b>") ${SFS}?" --form --button="gtk-yes:0" --button="gtk-no:1"
-		[ $? -ne 0 ] && continue
-		MNT="/mnt/`echo "$BASE" | tr '/ ' '+_'`"
-		mkdir -p "$MNT"
-		mountpoint -q "$MNT"
-		if [ $? -ne 0 ]; then
-			mount -r -t squashfs -o loop,noatime "$SFS" "$MNT" || continue
-		fi
-
-		defaultfilemanager "$MNT" &
 	done
 
 	exit 0
@@ -317,7 +312,7 @@ if [ -z "$BUTTONS" ]; then
 	<text><label>$(gettext 'file for automatic loading at system boot time.')</label></text>
 	<text><label>\" \"</label></text>
 	<text><label>$(gettext 'PUPMODE 5 does support clicking the SFS file in')</label></text>
-	<text><label>$(gettext 'ROX-Filer and choosing to load or unload now.')</label></text>"
+	<text><label>$(gettext 'Filemanager and choosing to load or unload now.')</label></text>"
 fi
 
 export DIALOG='<window title="SFS-Load" image-name="/usr/share/pixmaps/puppy/package_sfs.svg" window-position="1" resizable="false">
@@ -340,7 +335,7 @@ export DIALOG='<window title="SFS-Load" image-name="/usr/share/pixmaps/puppy/pac
 			<button>
 				<label>'$(gettext "Info")'</label>
 				<input file>/usr/share/pixmaps/puppy/info.svg</input><height>18</height><width>18</width>
-				<action>`Xdialog --wrap --screencenter --left --title "'$(gettext 'SFS-Load - INFO')'" --msgbox "'$(gettext '\nThis release of Puppy Linux utilizes an overlay file system with limited support for extra (optional) SFS files that add one or more applications to the underlying file system. With the exception of PUPMODE 5 (first boot), you can use this GUI to queue SFS files for loading at boot time. Specifically, the SFS queue requires a save file/folder for persistence of settings.\n\nThe SFS-Load GUI provides a clickable list of available extra SFS files stored with the Puppy SFS boot files. This location would be /mnt/home if you have already created a save file/folder. Select (click) an SFS file to add it to the queue for automatic loading at boot time. Click the SFS file again to remove it from the queue. Loading or unloading an SFS file by this method is not dynamic, so please reboot to activate your selection.\n\nAlternatively, you can use ROX-Filer to load or unload an SFS file. In this scenario, simply click the SFS file of interest and you will have the option to load/unload the SFS immediately (dynamically). Additionally, with the exception of PUPMODE 5 (first boot), you will have the option to queue/unqueue the selected file for loading at boot time. If the SFS file is loaded dynamically, you can later unload without rebooting.\n\nIn Puppy Linux with the overlay file system, dynamic loading of SFS files is implemented with multiple symlinks and this process may be associated with increased RAM consumption and prolonged load time if the SFS file is large. Although a dynamically-loaded SFS will add files to the system, any existing files with the same name are not replaced. Such limitations are not present when loading a queued SFS at boot time. Consequently, the preferred method for loading an SFS file is to create a save file/folder, then queue the SFS for loading at boot time.\n\n')'" 700x0` &</action>
+				<action>`Xdialog --wrap --screencenter --left --title "'$(gettext 'SFS-Load - INFO')'" --msgbox "'$(gettext '\nThis release of Puppy Linux utilizes an overlay file system with limited support for extra (optional) SFS files that add one or more applications to the underlying file system. With the exception of PUPMODE 5 (first boot), you can use this GUI to queue SFS files for loading at boot time. Specifically, the SFS queue requires a save file/folder for persistence of settings.\n\nThe SFS-Load GUI provides a clickable list of available extra SFS files stored with the Puppy SFS boot files. This location would be /mnt/home if you have already created a save file/folder. Select (click) an SFS file to add it to the queue for automatic loading at boot time. Click the SFS file again to remove it from the queue. Loading or unloading an SFS file by this method is not dynamic, so please reboot to activate your selection.\n\nAlternatively, you can use Filemanager to load or unload an SFS file. In this scenario, simply click the SFS file of interest and you will have the option to load/unload the SFS immediately (dynamically). Additionally, with the exception of PUPMODE 5 (first boot), you will have the option to queue/unqueue the selected file for loading at boot time. If the SFS file is loaded dynamically, you can later unload without rebooting.\n\nIn Puppy Linux with the overlay file system, dynamic loading of SFS files is implemented with multiple symlinks and this process may be associated with increased RAM consumption and prolonged load time if the SFS file is large. Although a dynamically-loaded SFS will add files to the system, any existing files with the same name are not replaced. Such limitations are not present when loading a queued SFS at boot time. Consequently, the preferred method for loading an SFS file is to create a save file/folder, then queue the SFS for loading at boot time.\n\n')'" 700x0` &</action>
 			</button>
 			<button>
 				<label>'$(gettext "Help")'</label>

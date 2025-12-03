@@ -572,8 +572,8 @@ VERSION_ID=$DISTRO_VERSION
 PRETTY_NAME="$DISTRO_NAME $DISTRO_VERSION"
 ANSI_COLOR="0;34"
 CPE_NAME="cpe:/o:puppy:puppy_linux:$DISTRO_VERSION"
-HOME_URL="http://puppylinux.com/"
-SUPPORT_URL="http://www.murga-linux.com/puppy/index.php"
+HOME_URL="https://www.puppylinux.com/"
+SUPPORT_URL="https://forum.puppylinux.com"
 BUG_REPORT_URL="https://github.com/puppylinux-woof-CE/woof-CE"
 _EOF
 rm -f etc/os-release

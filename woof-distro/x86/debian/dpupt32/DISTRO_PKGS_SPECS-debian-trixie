@@ -327,7 +327,7 @@ fi
 
 if [ "$DISTRO_TARGETARCH" = "x86" -o "$DISTRO_TARGETARCH" = "x86_64" ]; then
     PKGS_SPECS_TABLE="$PKGS_SPECS_TABLE
-yes|non-free-firmware-pc|amd64-microcode,bluez-firmware,firmware-amd-graphics,firmware-atheros,firmware-brcm80211,firmware-intel-sound,firmware-iwlwifi,firmware-linux,firmware-linux-nonfree,firmware-realtek,firmware-sof-signed,intel-microcode|exe,dev,doc,nls||deps:yes # based on live-task-non-free-firmware-pc
+yes|non-free-firmware-pc|amd64-microcode,bluez-firmware,firmware-amd-graphics,firmware-atheros,firmware-brcm80211,firmware-intel-sound,firmware-iwlwifi,firmware-linux,firmware-linux-nonfree,firmware-realtek,firmware-sof-signed,firmware-misc-nonfree,firmware-mediatek,firmware-intel-misc,firmware-intel-graphics,firmware-nvidia-graphics,intel-microcode,firmware-linux-free,iucode-tool|exe,dev,doc,nls||deps:yes # based on live-task-non-free-firmware-pc
 "
 fi
 
@@ -350,6 +350,7 @@ yes|libdbus-glib|libdbus-glib-1-2|exe,dev,doc,nls||deps:yes #dependency of webbr
 no|libdjvulibre21|libdjvulibre21|exe,dev,doc,nls||deps:yes #dependency of qpdfview
 yes|mhwaveedit|mhwaveedit|exe,dev>null,doc,nls
 yes|mpv|mpv|exe,dev,doc,nls||deps:yes
+yes|numlockx|numlockx|exe,dev,doc,nls||deps:yes
 yes|celluloid|celluloid|exe,dev,doc,nls||deps:yes
 no|parcellite|parcellite|exe,dev>null,doc,nls||deps:yes
 no|picom|picom|exe,dev,doc,nls||deps:yes
