@@ -62,7 +62,7 @@ yes|brightnessctl|brightnessctl|exe,dev,doc,nls||deps:yes
 yes|ca-certificates|ca-certificates|exe,dev,doc,nls||deps:yes
 yes|cairo|libcairo2,libcairo2-dev,libcairo-gobject2,libcairo-script-interpreter2|exe,dev,doc,nls||deps:yes
 yes|ccache|ccache|exe>dev,dev,doc,nls||deps:yes
-yes|claws-mail|claws-mail|exe,dev,doc,nls||deps:yes
+no|claws-mail|claws-mail|exe,dev,doc,nls||deps:yes
 no|claws-mail-deps|libetpan-dev|exe,dev,doc,nls||deps:yes
 yes|ClipIt||exe
 yes|connman|connman|exe,dev,doc,nls||deps:yes
