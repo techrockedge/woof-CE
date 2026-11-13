@@ -1,0 +1,30 @@
+name: NoblePup64 Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: 'Build variant (e.g., default, barebones)'
+        required: false
+        default: ''
+      kernel:
+        description: 'Kernel version/series to bundle'
+        required: false
+        default: '6.6'
+
+jobs:
+  build-noblepup64:
+    uses: ./.github/workflows/build.yml
+    with:
+      repo: ${{ github.repository }}
+      ref: ${{ github.ref }}
+      name: 'NoblePup64'
+      version: '24.04'
+      arch: 'x86_64'
+      compat-distro: 'ubuntu'
+      compat-distro-version: 'noble64'
+      kernel: ${{ github.event.inputs.kernel || '6.6' }}
+      prefix: 'upupnn'
+      artifact: 'NoblePup64-ISO'
+      retention: 7
+      variant: ${{ github.event.inputs.variant || '' }}
